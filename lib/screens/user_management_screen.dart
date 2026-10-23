@@ -321,7 +321,17 @@ class _UserManagementScreenState extends State<UserManagementScreen>
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontSize: 12.5, fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: AppTheme.textMuted)),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+                color: AppTheme.textMuted,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
           Text(
             val,
             style: TextStyle(

@@ -96,9 +96,8 @@ class _BankAndSecurityScreenState extends State<BankAndSecurityScreen> {
                 ),
                 const SizedBox(height: 20),
 
-                // SECTION: TOKEN SESI DIGITAL (JWT HS256)
-                _buildTokenSecurityCard(context, widget.coopService),
-                const SizedBox(height: 24),
+                // Keamanan Dual-Token, Hardware MAC AES-256, OAuth2 Scopes & Anti-CSRF
+                // berjalan otomatis sepenuhnya di belakang layar (CoopService) tanpa menampilkan kartu teknis.
 
                 // SECTION 1: REKENING BANK TERDAFTAR
                 const Text(
@@ -310,19 +309,6 @@ class _BankAndSecurityScreenState extends State<BankAndSecurityScreen> {
                       const Divider(height: 1),
 
                       ListTile(
-                        onTap: () => widget.coopService.lockAppNow(),
-                        title: const Text('Kunci Layar Sekarang (Uji Coba)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                        subtitle: const Text('Uji tampilan proteksi layar terkunci dengan PIN & Biometrik', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
-                        leading: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(10)),
-                          child: const Icon(Icons.lock_clock_rounded, color: AppTheme.dangerRed, size: 22),
-                        ),
-                        trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppTheme.textLight),
-                      ),
-                      const Divider(height: 1),
-
-                      ListTile(
                         title: const Text('Verifikasi Bendahara & HRD', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
                         subtitle: const Text('Setoran sukarela, pinjaman & pencairan resign wajib diverifikasi oleh Pengurus Koperasi.', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
                         leading: Container(
@@ -334,6 +320,8 @@ class _BankAndSecurityScreenState extends State<BankAndSecurityScreen> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 20),
+                _buildTokenSecurityCard(context, widget.coopService),
                 const SizedBox(height: 24),
 
                 // SECTION 3: LIVE AUDIT LOG (#53)

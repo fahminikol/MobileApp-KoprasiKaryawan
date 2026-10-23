@@ -50,4 +50,6 @@ app.*.map.json
 # Binaries and large artifacts
 cloudflared*
 *.apk
+*.apk *
+*.apk*
 

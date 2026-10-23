@@ -91,20 +91,26 @@ class _LoanScreenState extends State<LoanScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Row(
-                              children: [
-                                Icon(Icons.pie_chart_rounded, color: Colors.white, size: 18),
-                                SizedBox(width: 8),
-                                Text(
-                                  'Saldo Bagi Hasil Bunga 1% Anda',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13,
+                            const Expanded(
+                              child: Row(
+                                children: [
+                                  Icon(Icons.pie_chart_rounded, color: Colors.white, size: 18),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Saldo Bagi Hasil Bunga 1% Anda',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 13,
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
+                            const SizedBox(width: 6),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                               decoration: BoxDecoration(
