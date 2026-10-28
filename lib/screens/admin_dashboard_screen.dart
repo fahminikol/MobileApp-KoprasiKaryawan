@@ -1,16 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../services/coop_service.dart';
 import '../services/input_sanitizer.dart';
 import '../theme/app_theme.dart';
-import '../models/member_model.dart';
 import '../models/resignation_model.dart';
 import '../models/loan_model.dart';
 import '../models/admin_model.dart';
-import '../models/transaction_model.dart';
-import '../widgets/transfer_proof_picker.dart';
 import 'login_screen.dart';
-import 'user_management_screen.dart';
+import 'admin_service_screens.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   final CoopService coopService;
@@ -27,31 +23,11 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   CoopService get coopService => widget.coopService;
 
-  final GlobalKey _payrollKey = GlobalKey();
-  final GlobalKey _pinResetKey = GlobalKey();
-  final GlobalKey _depositWithdrawKey = GlobalKey();
-  final GlobalKey _loanKey = GlobalKey();
-  final GlobalKey _earlySettlementKey = GlobalKey();
-  final GlobalKey _resignationKey = GlobalKey();
-
-  void _scrollToSection(GlobalKey key) {
-    final targetContext = key.currentContext;
-    if (targetContext != null) {
-      Scrollable.ensureVisible(
-        targetContext,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOutCubic,
-        alignment: 0.05,
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
       listenable: coopService,
       builder: (context, _) {
-        final members = coopService.members;
         final pendingResignations = coopService.resignations
             .where((r) =>
                 r.status != ResignationStatus.disbursed &&
@@ -200,6 +176,24 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                                 Icons.shield_rounded,
                                 size: 17,
                                 color: AppTheme.primaryBlue,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          // Settings Button
+                          GestureDetector(
+                            onTap: () => _showAdminSettingsSheet(context),
+                            child: Container(
+                              padding: const EdgeInsets.all(7),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF1F5F9),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: const Color(0xFFCBD5E1)),
+                              ),
+                              child: const Icon(
+                                Icons.settings_rounded,
+                                size: 17,
+                                color: AppTheme.textDark,
                               ),
                             ),
                           ),
@@ -527,16 +521,18 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     children: [
                       _buildMenuItem(
                         context,
-                        icon: Icons.groups_rounded,
-                        label: 'Anggota',
-                        badgeText: '${members.length}',
+                        icon: Icons.admin_panel_settings_rounded,
+                        label: 'Akun & PIN',
+                        badgeText: (pendingMembers.length + pendingPinResets.length) > 0
+                            ? '${pendingMembers.length + pendingPinResets.length}'
+                            : null,
                         bgColor: AppTheme.pastelBlueBg,
-                        iconColor: AppTheme.pastelBlueIcon,
+                        iconColor: AppTheme.primaryBlue,
                         onTap: () {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => UserManagementScreen(coopService: coopService),
+                              builder: (_) => AdminPinVerificationScreen(coopService: coopService),
                             ),
                           );
                         },
@@ -548,7 +544,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         badgeText: alreadyExecutedThisMonth ? 'Selesai' : 'Siap',
                         bgColor: AppTheme.pastelPinkBg,
                         iconColor: AppTheme.pastelPinkIcon,
-                        onTap: () => _scrollToSection(_payrollKey),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AdminPayrollScreen(coopService: coopService),
+                            ),
+                          );
+                        },
                       ),
                       _buildMenuItem(
                         context,
@@ -557,7 +560,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         badgeText: pendingLoans.isNotEmpty ? '${pendingLoans.length}' : null,
                         bgColor: AppTheme.pastelYellowBg,
                         iconColor: AppTheme.pastelYellowIcon,
-                        onTap: () => _scrollToSection(_loanKey),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AdminLoanApprovalScreen(coopService: coopService),
+                            ),
+                          );
+                        },
                       ),
                       _buildMenuItem(
                         context,
@@ -568,7 +578,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                             : null,
                         bgColor: AppTheme.pastelGreenBg,
                         iconColor: AppTheme.pastelGreenIcon,
-                        onTap: () => _scrollToSection(_depositWithdrawKey),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AdminSavingsApprovalScreen(coopService: coopService),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -585,7 +602,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         badgeText: pendingResignations.isNotEmpty ? '${pendingResignations.length}' : null,
                         bgColor: AppTheme.pastelCoralBg,
                         iconColor: AppTheme.pastelCoralIcon,
-                        onTap: () => _scrollToSection(_resignationKey),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AdminResignationScreen(coopService: coopService),
+                            ),
+                          );
+                        },
                       ),
                       _buildMenuItem(
                         context,
@@ -594,7 +618,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         badgeText: 'Finance',
                         bgColor: AppTheme.pastelCyanBg,
                         iconColor: AppTheme.pastelCyanIcon,
-                        onTap: () => _showPayrollPreviewSheet(context),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AdminPayrollRecapScreen(coopService: coopService),
+                            ),
+                          );
+                        },
                       ),
                       _buildMenuItem(
                         context,
@@ -603,16 +634,30 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                         badgeText: pendingEarlySettlements.isNotEmpty ? '${pendingEarlySettlements.length}' : null,
                         bgColor: AppTheme.pastelPurpleBg,
                         iconColor: AppTheme.pastelPurpleIcon,
-                        onTap: () => _scrollToSection(_earlySettlementKey),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AdminEarlySettlementScreen(coopService: coopService),
+                            ),
+                          );
+                        },
                       ),
                       _buildMenuItem(
                         context,
-                        icon: Icons.lock_reset_rounded,
-                        label: 'Reset PIN',
-                        badgeText: pendingPinResets.isNotEmpty ? '${pendingPinResets.length}' : null,
-                        bgColor: AppTheme.pastelBlueBg,
-                        iconColor: AppTheme.primaryBlue,
-                        onTap: () => _scrollToSection(_pinResetKey),
+                        icon: Icons.playlist_add_check_circle_rounded,
+                        label: 'Pinjaman Aktif',
+                        badgeText: activeLoans.isNotEmpty ? '${activeLoans.length}' : null,
+                        bgColor: AppTheme.pastelPurpleBg,
+                        iconColor: AppTheme.pastelPurpleIcon,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AdminLoanApprovalScreen(coopService: coopService),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -736,1071 +781,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
-
-                // FEATURE 1: Automated Monthly Payroll Deduction Batch + Rekap Potongan Gaji Finance (#2, #6, #92)
-                Container(
-                  key: _payrollKey,
-                  padding: const EdgeInsets.all(18),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: const Color(0xFFE2E8F0)),
-                    boxShadow: AppTheme.softShadow,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.autorenew_rounded, color: AppTheme.primaryBlue),
-                          const SizedBox(width: 8),
-                          const Expanded(
-                            child: Text(
-                              'Payroll & Rekap Finance',
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppTheme.textDark),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: alreadyExecutedThisMonth ? AppTheme.pastelGreenBg : AppTheme.primaryBlueLight,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              alreadyExecutedThisMonth
-                                  ? 'Periode ${now.month}/${now.year} Selesai ✓'
-                                  : 'Periode ${now.month}/${now.year}',
-                              style: TextStyle(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: alreadyExecutedThisMonth ? AppTheme.successGreen : AppTheme.primaryBlue,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        '• Karyawan baru (gajian ke-1) dipotong Rp 125.000 (100k pokok + 25k wajib).\n'
-                        '• Karyawan lama dipotong Rp 25.000 (wajib) + cicilan pinjaman aktif.\n'
-                        '• Bunga 1% otomatis dibagi rata ke seluruh anggota aktif!',
-                        style: TextStyle(fontSize: 11.5, color: AppTheme.textMuted, height: 1.4),
-                      ),
-                      const SizedBox(height: 14),
-                      // Tombol Lihat Rekap Potongan Gaji Finance (#2)
-                      SizedBox(
-                        width: double.infinity,
-                        height: 44,
-                        child: OutlinedButton.icon(
-                          onPressed: () => _showPayrollPreviewSheet(context),
-                          icon: const Icon(Icons.receipt_long_rounded, size: 18),
-                          label: const Text(
-                            'Lihat & Salin Tabel Rekap Potongan Gaji (Finance)',
-                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: AppTheme.primaryBlue,
-                            side: const BorderSide(color: AppTheme.primaryBlue),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: ElevatedButton.icon(
-                          onPressed: alreadyExecutedThisMonth
-                              ? null
-                              : () => _confirmAndExecutePayroll(context),
-                          icon: Icon(
-                            alreadyExecutedThisMonth ? Icons.check_circle_rounded : Icons.flash_on_rounded,
-                            size: 18,
-                          ),
-                          label: Text(
-                            alreadyExecutedThisMonth
-                                ? 'Payroll Bulan ${CoopService.formatMonthYear(now.month, now.year)} Sudah Diproses'
-                                : 'Eksekusi Potongan Payroll Bulan Berjalan',
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryBlue,
-                            foregroundColor: Colors.white,
-                            disabledBackgroundColor: Colors.grey.shade300,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
                 const SizedBox(height: 24),
-
-                // FEATURE 1B: Verifikasi Pendaftaran Anggota Baru & Otorisasi Reset PIN Berlapis
-                Container(
-                  key: _pinResetKey,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Verifikasi Akun & Reset PIN',
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${pendingMembers.length + pendingPinResets.length} Menunggu',
-                        style: const TextStyle(fontSize: 12, color: AppTheme.dangerRed, fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                if (pendingMembers.isEmpty && pendingPinResets.isEmpty)
-                  _buildEmptyBox('Tidak ada pendaftaran anggota baru atau permohonan reset PIN yang menunggu verifikasi HRD.')
-                else ...[
-                  if (pendingMembers.isNotEmpty)
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: pendingMembers.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (ctx, idx) {
-                        final m = pendingMembers[idx];
-                        return Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppTheme.primaryBlueLight),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      '🆕 Pendaftaran Baru: ${m.name} (NIK: ${m.nik})',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.pastelYellowBg,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Text(
-                                      'Menunggu HRD',
-                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.warningOrange),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Divisi: ${m.department} • Email: ${m.email} • HP: ${m.phone}\n'
-                                'Rekening: ${m.bankName} - ${m.bankAccountNumber} • PIN Karyawan: •••••• (Rahasia)',
-                                style: const TextStyle(fontSize: 11.5, color: AppTheme.textMuted, height: 1.35),
-                              ),
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: OutlinedButton(
-                                      onPressed: () {
-                                        if (!_requirePermission(
-                                          context,
-                                          coopService.currentAdmin?.canVerifyMembers ?? true,
-                                          'Super Admin / Ketua / Sekretaris [admin:members:verify]',
-                                        )) {
-                                          return;
-                                        }
-                                        coopService.rejectPendingMember(m.id);
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Pendaftaran ${m.name} ditolak & dihapus.')),
-                                        );
-                                      },
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: AppTheme.dangerRed,
-                                        side: const BorderSide(color: AppTheme.dangerRed),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                      ),
-                                      child: const Text('Tolak Akun'),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: ElevatedButton(
-                                      onPressed: () {
-                                        if (!_requirePermission(
-                                          context,
-                                          coopService.currentAdmin?.canVerifyMembers ?? true,
-                                          'Super Admin / Ketua / Sekretaris [admin:members:verify]',
-                                        )) {
-                                          return;
-                                        }
-                                        coopService.approvePendingMember(m.id);
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('✅ Akun ${m.name} (NIK: ${m.nik}) diverifikasi & diaktifkan!'),
-                                            backgroundColor: AppTheme.successGreen,
-                                          ),
-                                        );
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppTheme.successGreen,
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                      ),
-                                      child: const Text('Verifikasi & Aktifkan'),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  if (pendingMembers.isNotEmpty && pendingPinResets.isNotEmpty)
-                    const SizedBox(height: 10),
-                  if (pendingPinResets.isNotEmpty)
-                    ListView.separated(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: pendingPinResets.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 10),
-                      itemBuilder: (ctx, idx) {
-                        final m = pendingPinResets[idx];
-                        return Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: AppTheme.warningOrange.withValues(alpha: 0.5)),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      '🔐 Reset PIN (Lolos 3-Faktor): ${m.name}',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
-                                    ),
-                                  ),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.primaryBlueLight,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: const Text(
-                                      'PIN Baru: ••••••',
-                                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.primaryBlueDark),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'NIK: ${m.nik} • Email Cocok: ${m.email} • Rek Cocok: ${m.bankName} ${m.bankAccountNumber}\n'
-                                'Status Keamanan: Karyawan telah memverifikasi 3 faktor data pribadi. PIN baru tetap terenkripsi (••••••).',
-                                style: const TextStyle(fontSize: 11.5, color: AppTheme.textMuted, height: 1.35),
-                              ),
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: OutlinedButton(
-                                      onPressed: () {
-                                        if (!_requirePermission(
-                                          context,
-                                          coopService.currentAdmin?.canVerifyMembers ?? true,
-                                          'Super Admin / Ketua / Sekretaris [admin:members:verify]',
-                                        )) {
-                                          return;
-                                        }
-                                        coopService.rejectPendingPinReset(m.id);
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(content: Text('Permohonan reset PIN ${m.name} ditolak.')),
-                                        );
-                                      },
-                                      style: OutlinedButton.styleFrom(
-                                        foregroundColor: AppTheme.dangerRed,
-                                        side: const BorderSide(color: AppTheme.dangerRed),
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                      ),
-                                      child: const Text('Tolak Reset'),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: ElevatedButton(
-                                      onPressed: () {
-                                        if (!_requirePermission(
-                                          context,
-                                          coopService.currentAdmin?.canVerifyMembers ?? true,
-                                          'Super Admin / Ketua / Sekretaris [admin:members:verify]',
-                                        )) {
-                                          return;
-                                        }
-                                        coopService.approvePendingPinReset(m.id);
-                                        ScaffoldMessenger.of(context).showSnackBar(
-                                          SnackBar(
-                                            content: Text('✅ Reset PIN ${m.name} diotorisasi! Karyawan kini dapat login dengan PIN barunya.'),
-                                            backgroundColor: AppTheme.successGreen,
-                                          ),
-                                        );
-                                      },
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppTheme.primaryBlue,
-                                        foregroundColor: Colors.white,
-                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                      ),
-                                      child: const Text('Setujui Reset PIN'),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                ],
-                const SizedBox(height: 24),
-
-                // FEATURE 2: Verifikasi Setoran Simpanan Sukarela (#5, #15)
-                Container(
-                  key: _depositWithdrawKey,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Verifikasi Setor Sukarela',
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${pendingDeposits.length} Menunggu',
-                        style: const TextStyle(fontSize: 12, color: AppTheme.primaryBlue, fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                if (pendingDeposits.isEmpty)
-                  _buildEmptyBox('Tidak ada setoran sukarela yang menunggu verifikasi.')
-                else
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: pendingDeposits.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (ctx, idx) {
-                      final dep = pendingDeposits[idx];
-                      return Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppTheme.primaryBlueLight),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(child: Text(dep.memberName, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14))),
-                                const SizedBox(width: 8),
-                                Text(
-                                  CoopService.formatRupiah(dep.amount),
-                                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: AppTheme.successGreen),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Catatan: ${dep.description} • ${CoopService.formatDate(dep.date)}',
-                              style: const TextStyle(fontSize: 11.5, color: AppTheme.textMuted),
-                            ),
-                            if (dep.proofImageBase64 != null && dep.proofImageBase64!.isNotEmpty) ...[
-                              const SizedBox(height: 6),
-                              OutlinedButton.icon(
-                                onPressed: () => showTransferProofDialog(
-                                  context,
-                                  dep.proofImageBase64!,
-                                  title: 'Bukti Transfer Setor Sukarela (${dep.memberName})',
-                                  subtitle: 'Nominal: ${CoopService.formatRupiah(dep.amount)} • ${dep.description}',
-                                ),
-                                icon: const Icon(Icons.image_search_rounded, size: 15),
-                                label: const Text('Lihat Foto Bukti Transfer Karyawan', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppTheme.primaryBlue,
-                                  side: const BorderSide(color: AppTheme.primaryBlue),
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton(
-                                    onPressed: () {
-                                      if (!_requirePermission(
-                                        context,
-                                        coopService.currentAdmin?.canVerifyBankMutation ?? true,
-                                        'Super Admin / Bendahara [admin:bank:verify]',
-                                      )) {
-                                        return;
-                                      }
-                                      coopService.rejectPendingDeposit(dep.id);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Setoran sukarela ${dep.memberName} ditolak.')),
-                                      );
-                                    },
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppTheme.dangerRed,
-                                      side: const BorderSide(color: AppTheme.dangerRed),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                    ),
-                                    child: const Text('Tolak'),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      if (!_requirePermission(
-                                        context,
-                                        coopService.currentAdmin?.canVerifyBankMutation ?? true,
-                                        'Super Admin / Bendahara [admin:bank:verify]',
-                                      )) {
-                                        return;
-                                      }
-                                      coopService.approvePendingDeposit(dep.id);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('✅ Setoran ${CoopService.formatRupiah(dep.amount)} (${dep.memberName}) diverifikasi & masuk ke saldo!'),
-                                          backgroundColor: AppTheme.successGreen,
-                                        ),
-                                      );
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.successGreen,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                    ),
-                                    child: const Text('Verifikasi Masuk'),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                const SizedBox(height: 24),
-
-                // FEATURE 2C: Pencairan Tarik Simpanan Sukarela (Menunggu Transfer Bendahara)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Pencairan Tarik Simpanan',
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${pendingWithdrawals.length} Menunggu',
-                      style: const TextStyle(fontSize: 12, color: AppTheme.primaryBlue, fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                if (pendingWithdrawals.isEmpty)
-                  _buildEmptyBox('Tidak ada pengajuan tarik simpanan sukarela yang menunggu pencairan.')
-                else
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: pendingWithdrawals.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (ctx, idx) {
-                      final wd = pendingWithdrawals[idx];
-                      final member = members.where((m) => m.id == wd.memberId).firstOrNull;
-                      return Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppTheme.primaryBlueLight),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(child: Text(wd.memberName, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14))),
-                                const SizedBox(width: 8),
-                                Text(
-                                  CoopService.formatRupiah(wd.amount),
-                                  style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.primaryBlueDark, fontSize: 14),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            if (member != null)
-                              Text(
-                                'Transfer ke: ${member.bankName} - ${member.bankAccountNumber} a.n. ${member.name} • Saldo Sukarela: ${CoopService.formatRupiah(member.simpananSukarela)}',
-                                style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w600, color: AppTheme.primaryBlueDark),
-                              ),
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton(
-                                    onPressed: () {
-                                      if (!_requirePermission(context, coopService.currentAdmin?.canApproveFinance ?? true, 'Bendahara / Super Admin')) return;
-                                      coopService.rejectPendingWithdrawal(wd.id);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Pengajuan tarik simpanan ${wd.memberName} ditolak.')),
-                                      );
-                                    },
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppTheme.dangerRed,
-                                      side: const BorderSide(color: AppTheme.dangerRed),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                    ),
-                                    child: const Text('Tolak'),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  flex: 2,
-                                  child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      if (!_requirePermission(context, coopService.currentAdmin?.canApproveFinance ?? true, 'Bendahara / Super Admin')) return;
-                                      _showDisburseWithdrawalDialog(context, wd, member);
-                                    },
-                                    icon: const Icon(Icons.send_to_mobile_rounded, size: 16),
-                                    label: const Text('Proses Transfer & Cairkan', style: TextStyle(fontSize: 12)),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.primaryBlue,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                const SizedBox(height: 24),
-
-                // FEATURE 3: Loan Approvals + Reject Button (#7, #18, #93)
-                Container(
-                  key: _loanKey,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Persetujuan Pinjaman Baru',
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${pendingLoans.length} Menunggu',
-                        style: const TextStyle(fontSize: 12, color: AppTheme.warningOrange, fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                if (pendingLoans.isEmpty)
-                  _buildEmptyBox('Tidak ada pengajuan pinjaman pending.')
-                else
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: pendingLoans.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (ctx, index) {
-                      final l = pendingLoans[index];
-                      final borrower = members.where((m) => m.id == l.memberId).firstOrNull;
-                      return Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: const Color(0xFFFEF3C7)),
-                          boxShadow: AppTheme.softShadow,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(child: Text(l.memberName, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
-                                const SizedBox(width: 8),
-                                Text(
-                                  CoopService.formatRupiah(l.amount),
-                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.primaryBlue),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Tujuan: ${l.purpose} • Tenor: ${l.tenorMonths} bln • Cicilan: ${CoopService.formatRupiah(l.totalMonthlyInstallment)}/bln',
-                              style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
-                            ),
-                            if (borrower != null) ...[
-                              const SizedBox(height: 6),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      'Transfer Pencairan ke: ${borrower.bankName} - ${borrower.bankAccountNumber} (${borrower.name})',
-                                      style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.w700, color: AppTheme.primaryBlueDark),
-                                    ),
-                                  ),
-                                  InkWell(
-                                    onTap: () {
-                                      Clipboard.setData(ClipboardData(text: borrower.bankAccountNumber));
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('📋 No. Rekening ${borrower.bankName} (${borrower.bankAccountNumber}) disalin!')),
-                                      );
-                                    },
-                                    child: const Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                      child: Icon(Icons.copy_rounded, size: 15, color: AppTheme.primaryBlue),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                            const SizedBox(height: 12),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton(
-                                    onPressed: () => _showRejectLoanDialog(context, l),
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppTheme.dangerRed,
-                                      side: const BorderSide(color: AppTheme.dangerRed),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    ),
-                                    child: const Text('Tolak'),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: ElevatedButton.icon(
-                                    onPressed: () => _showDisburseLoanDialog(context, l, borrower),
-                                    icon: const Icon(Icons.send_to_mobile_rounded, size: 16),
-                                    label: const Text('Proses Transfer & Cairkan'),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.primaryBlue,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                const SizedBox(height: 24),
-
-                // FEATURE 3B: Verifikasi Pelunasan Pinjaman Dipercepat
-                Container(
-                  key: _earlySettlementKey,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Verifikasi Pelunasan Dipercepat',
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${pendingEarlySettlements.length} Menunggu',
-                        style: const TextStyle(fontSize: 12, color: AppTheme.successGreen, fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                if (pendingEarlySettlements.isEmpty)
-                  _buildEmptyBox('Tidak ada pengajuan pelunasan pinjaman dipercepat yang menunggu verifikasi.')
-                else
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: pendingEarlySettlements.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 10),
-                    itemBuilder: (ctx, idx) {
-                      final l = pendingEarlySettlements[idx];
-                      final totalPayoff = l.remainingBalance + l.monthlyInterest;
-                      return Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppTheme.successGreen.withValues(alpha: 0.45)),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(child: Text(l.memberName, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14))),
-                                const SizedBox(width: 8),
-                                Text(
-                                  CoopService.formatRupiah(totalPayoff),
-                                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: AppTheme.successGreen),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Sisa Pokok: ${CoopService.formatRupiah(l.remainingBalance)} + Bunga 1%: ${CoopService.formatRupiah(l.monthlyInterest)}\n'
-                              'Catatan Transfer: ${l.earlySettlementNote ?? "-"}',
-                              style: const TextStyle(fontSize: 11.5, color: AppTheme.textMuted, height: 1.35),
-                            ),
-                            if (l.earlySettlementProofBase64 != null && l.earlySettlementProofBase64!.isNotEmpty) ...[
-                              const SizedBox(height: 6),
-                              OutlinedButton.icon(
-                                onPressed: () => showTransferProofDialog(
-                                  context,
-                                  l.earlySettlementProofBase64!,
-                                  title: 'Bukti Transfer Pelunasan Dipercepat (${l.memberName})',
-                                  subtitle: 'Total Pelunasan: ${CoopService.formatRupiah(totalPayoff)}',
-                                ),
-                                icon: const Icon(Icons.image_search_rounded, size: 15),
-                                label: const Text('Lihat Foto Bukti Transfer Pelunasan', style: TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold)),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: AppTheme.primaryBlue,
-                                  side: const BorderSide(color: AppTheme.primaryBlue),
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 10),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton(
-                                    onPressed: () {
-                                      if (!_requirePermission(
-                                        context,
-                                        coopService.currentAdmin?.canVerifyBankMutation ?? true,
-                                        'Super Admin / Bendahara [admin:bank:verify]',
-                                      )) {
-                                        return;
-                                      }
-                                      coopService.rejectEarlyLoanSettlement(l.id);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Pelunasan dipercepat ${l.memberName} ditolak.')),
-                                      );
-                                    },
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppTheme.dangerRed,
-                                      side: const BorderSide(color: AppTheme.dangerRed),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                    ),
-                                    child: const Text('Belum Masuk (Tolak)'),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: ElevatedButton(
-                                    onPressed: () {
-                                      if (!_requirePermission(
-                                        context,
-                                        coopService.currentAdmin?.canVerifyBankMutation ?? true,
-                                        'Super Admin / Bendahara [admin:bank:verify]',
-                                      )) {
-                                        return;
-                                      }
-                                      coopService.settleLoanEarly(l.id);
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text('✅ Pelunasan ${l.memberName} (${CoopService.formatRupiah(totalPayoff)}) diverifikasi LUNAS!'),
-                                          backgroundColor: AppTheme.successGreen,
-                                        ),
-                                      );
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.successGreen,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                                    ),
-                                    child: const Text('Verifikasi Lunas'),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                const SizedBox(height: 24),
-
-                // FEATURE 3C: Rincian Pinjaman Beredar (Daftar Peminjam Aktif & Jadwal Jatuh Tempo)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Rincian Pinjaman Beredar (Aktif)',
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${activeLoans.length} Peminjam • Total ${CoopService.formatRupiah(coopService.totalOutstandingLoans)}',
-                      style: const TextStyle(fontSize: 11.5, color: AppTheme.primaryBlue, fontWeight: FontWeight.w700),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                if (activeLoans.isEmpty)
-                  _buildEmptyBox('Tidak ada pinjaman aktif yang sedang berjalan.')
-                else
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: activeLoans.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (ctx, idx) {
-                      final al = activeLoans[idx];
-                      return Container(
-                        padding: const EdgeInsets.all(13),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(color: const Color(0xFFE2E8F0)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '${al.memberName} (${al.purpose})',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    'Pinjaman Awal: ${CoopService.formatRupiah(al.amount)} • Tenor: ${al.paidInstallments}/${al.tenorMonths} bln (Sisa ${al.remainingTenorMonths}x potong gaji)\n'
-                                    'Jatuh Tempo: Otomatis potong gaji Rp ${CoopService.formatRupiah(al.totalMonthlyInstallment)} setiap Tanggal 28',
-                                    style: const TextStyle(fontSize: 11, color: AppTheme.textMuted, height: 1.35),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                const Text('Sisa Pokok', style: TextStyle(fontSize: 10, color: AppTheme.textMuted)),
-                                Text(
-                                  CoopService.formatRupiah(al.remainingBalance),
-                                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13.5, color: AppTheme.warningOrange),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                const SizedBox(height: 24),
-
-                // FEATURE 4: Resignation Claims & Refund Approvals + Reject Button (#7, #18)
-                Container(
-                  key: _resignationKey,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Expanded(
-                        child: Text(
-                          'Persetujuan Klaim Resign',
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.textDark),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        '${pendingResignations.length} Menunggu',
-                        style: const TextStyle(fontSize: 12, color: AppTheme.dangerRed, fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 10),
-                if (pendingResignations.isEmpty)
-                  _buildEmptyBox('Tidak ada pengajuan resign pending.')
-                else
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: pendingResignations.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (ctx, index) {
-                      final rsg = pendingResignations[index];
-                      return Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(18),
-                          border: Border.all(color: const Color(0xFFFEE2E2)),
-                          boxShadow: AppTheme.softShadow,
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(child: Text(rsg.memberName, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15))),
-                                const SizedBox(width: 8),
-                                Text('NIK: ${rsg.memberNik}', style: const TextStyle(fontSize: 11, color: AppTheme.textLight)),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text(
-                              'Alasan: "${rsg.reason}"',
-                              style: const TextStyle(fontSize: 12, color: AppTheme.textMuted, fontStyle: FontStyle.italic),
-                            ),
-                            const Divider(height: 18),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                const Expanded(
-                                  child: Text(
-                                    'Total Cair Bersih (Termasuk SHU 1%):',
-                                    overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(fontSize: 11.5, color: AppTheme.textMuted),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  CoopService.formatRupiah(rsg.netRefund),
-                                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800, color: AppTheme.dangerRed),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              'Transfer ke: ${rsg.destinationBank} - ${rsg.destinationAccountNumber} (${rsg.destinationAccountHolder})',
-                              style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
-                            ),
-                            const SizedBox(height: 14),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: OutlinedButton(
-                                    onPressed: () {
-                                      if (!_requirePermission(context, coopService.currentAdmin?.canApproveFinance ?? true, 'Bendahara / Ketua / Super Admin [admin:finance:approve]')) return;
-                                      coopService.rejectResignation(rsg.id, 'Pengajuan dibatalkan/ditolak HRD');
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(content: Text('Klaim resign ${rsg.memberName} ditolak & status kembali Aktif.')),
-                                      );
-                                    },
-                                    style: OutlinedButton.styleFrom(
-                                      foregroundColor: AppTheme.dangerRed,
-                                      side: const BorderSide(color: AppTheme.dangerRed),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    ),
-                                    child: const Text('Tolak'),
-                                  ),
-                                ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  flex: 2,
-                                  child: ElevatedButton.icon(
-                                    onPressed: () {
-                                      if (!_requirePermission(context, coopService.currentAdmin?.canApproveFinance ?? true, 'Bendahara / Ketua / Super Admin [admin:finance:approve]')) return;
-                                      _showDisburseResignationDialog(context, rsg);
-                                    },
-                                    icon: const Icon(Icons.send_to_mobile_rounded, size: 17),
-                                    label: const Text('Proses Transfer & Tutup Akun', style: TextStyle(fontSize: 12)),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.successGreen,
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                const SizedBox(height: 24),
-
-                // Reset Data Simulasi (#100)
-                Center(
-                  child: TextButton.icon(
-                    onPressed: () {
-                      coopService.resetToDefaultDemoData();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('🔄 Data simulasi berhasil di-reset ke pengaturan awal!')),
-                      );
-                    },
-                    icon: const Icon(Icons.restore_rounded, size: 16, color: AppTheme.textMuted),
-                    label: const Text(
-                      'Reset Simulasi ke Data Awal',
-                      style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
               ],
             ),
           ),
@@ -1809,21 +790,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     },
   );
 }
-
-  Widget _buildEmptyBox(String text) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF1F5F9)),
-      ),
-      child: Center(
-        child: Text(text, style: const TextStyle(color: AppTheme.textMuted, fontSize: 12)),
-      ),
-    );
-  }
 
   Widget _buildAdminStat(String title, String value, IconData icon, Color color, Color bgColor) {
     return Container(
@@ -1850,278 +816,262 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  void _showRejectLoanDialog(BuildContext context, LoanModel loan) {
-    if (!_requirePermission(
-      context,
-      coopService.currentAdmin?.canApproveFinance ?? true,
-      'Super Admin / Ketua / Bendahara [admin:finance:approve]',
-    )) {
-      return;
-    }
-    final reasonCtrl = TextEditingController(text: 'Plafon belum memenuhi syarat / Kas sedang diprioritaskan');
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Tolak Pinjaman ${loan.memberName}', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        content: TextField(
-          controller: reasonCtrl,
-          maxLines: 2,
-          decoration: InputDecoration(
-            labelText: 'Alasan Penolakan',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () {
-              coopService.rejectLoan(loan.id, reasonCtrl.text);
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Pengajuan pinjaman ${loan.memberName} telah ditolak.')),
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.dangerRed, foregroundColor: Colors.white),
-            child: const Text('Tolak Pengajuan'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Tabel Rekap Potongan Gaji Bulan Ini untuk Finance (#2, #20)
-  void _showPayrollPreviewSheet(BuildContext context) {
-    final now = DateTime.now();
-    final rows = coopService.getMonthlyPayrollPreview(month: now.month, year: now.year);
-    final grandTotal = rows.fold<double>(0.0, (sum, r) => sum + (r['totalDeduction'] as double));
-
+  void _showAdminSettingsSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(26))),
-      builder: (ctx) => DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.82,
-        maxChildSize: 0.94,
-        minChildSize: 0.5,
-        builder: (_, scrollCtrl) => Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Rekap Potongan Gaji (Untuk Finance)',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textDark),
-                      ),
-                      Text(
-                        'Periode: ${CoopService.formatMonthYear(now.month, now.year)} • ${rows.length} Karyawan Aktif',
-                        style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
-                      ),
-                    ],
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.close_rounded),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
-              ),
-              const Divider(height: 20),
-              Expanded(
-                child: ListView.separated(
-                  controller: scrollCtrl,
-                  itemCount: rows.length,
-                  separatorBuilder: (_, __) => const SizedBox(height: 10),
-                  itemBuilder: (_, idx) {
-                    final r = rows[idx];
-                    return Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF8FAFC),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFE2E8F0)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                '${idx + 1}. ${r['name']} (${r['nik']})',
-                                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
-                              ),
-                              Text(
-                                CoopService.formatRupiah(r['totalDeduction'] as double),
-                                style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: AppTheme.primaryBlue),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Divisi: ${r['department']} • '
-                            'Pokok: ${CoopService.formatRupiah(r['pokok'] as double)} • '
-                            'Wajib: ${CoopService.formatRupiah(r['wajib'] as double)} • '
-                            'Cicilan+Bunga 1%: ${CoopService.formatRupiah(r['loanInstallment'] as double)}',
-                            style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const Divider(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('TOTAL POTONGAN PAYROLL:', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
-                  Text(
-                    CoopService.formatRupiah(grandTotal),
-                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppTheme.successGreen),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                height: 46,
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    final buffer = StringBuffer();
-                    buffer.writeln('REKAP POTONGAN GAJI KOPKAR PT BUDI BERLIAN MOTOR');
-                    buffer.writeln('Periode: ${CoopService.formatMonthYear(now.month, now.year)}');
-                    buffer.writeln('------------------------------------------------');
-                    for (final r in rows) {
-                      buffer.writeln(
-                        '${r['nik']} | ${r['name']} | Pokok: ${CoopService.formatRupiah(r['pokok'] as double)} | Wajib: ${CoopService.formatRupiah(r['wajib'] as double)} | Cicilan: ${CoopService.formatRupiah(r['loanInstallment'] as double)} | TOTAL: ${CoopService.formatRupiah(r['totalDeduction'] as double)}',
-                      );
-                    }
-                    buffer.writeln('------------------------------------------------');
-                    buffer.writeln('GRAND TOTAL: ${CoopService.formatRupiah(grandTotal)}');
-                    Clipboard.setData(ClipboardData(text: buffer.toString()));
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('📋 Tabel Rekap Potongan Gaji berhasil disalin! Siap ditempel ke WhatsApp / Excel Finance.'),
-                        backgroundColor: AppTheme.successGreen,
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.copy_rounded, size: 18),
-                  label: const Text('Salin Rekap untuk Diserahkan ke Finance / Excel'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlue,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                ),
-              ),
-            ],
-          ),
+      backgroundColor: Colors.transparent,
+      builder: (sheetCtx) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
         ),
-      ),
-    );
-  }
-
-  // Dialog Konfirmasi Sebelum Eksekusi Payroll (#92)
-  void _confirmAndExecutePayroll(BuildContext context) {
-    if (!_requirePermission(
-      context,
-      coopService.currentAdmin?.canExecutePayroll ?? true,
-      'Super Admin / Ketua / Bendahara [admin:payroll:execute]',
-    )) {
-      return;
-    }
-    final now = DateTime.now();
-    final rows = coopService.getMonthlyPayrollPreview(month: now.month, year: now.year);
-    final grandTotal = rows.fold<double>(0.0, (sum, r) => sum + (r['totalDeduction'] as double));
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Konfirmasi Eksekusi Payroll', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-        content: Text(
-          'Apakah Anda yakin ingin memproses potongan gaji bulan ${CoopService.formatMonthYear(now.month, now.year)} untuk ${rows.length} karyawan aktif dengan total ${CoopService.formatRupiah(grandTotal)}?',
-          style: const TextStyle(fontSize: 13),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _executeBatchDeduction(context);
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue, foregroundColor: Colors.white),
-            child: const Text('Ya, Eksekusi Sekarang'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _executeBatchDeduction(BuildContext context) {
-    final now = DateTime.now();
-    final result = coopService.executeMonthlyPayrollBatch(month: now.month, year: now.year);
-
-    if (result['alreadyExecuted'] == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('⚠️ Payroll periode bulan ini sudah pernah diproses! (Proteksi Anti-Dobel Payroll)'),
-          backgroundColor: AppTheme.warningOrange,
-        ),
-      );
-      return;
-    }
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.check_circle_rounded, color: AppTheme.successGreen),
-            SizedBox(width: 8),
-            Text('Payroll Sukses Diproses', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        content: Column(
+        padding: const EdgeInsets.fromLTRB(20, 14, 20, 30),
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Periode: ${CoopService.formatMonthYear(now.month, now.year)}'),
-            const SizedBox(height: 8),
-            Text('• ${result['month1Count']} Karyawan Baru (Gajian ke-1): dipotong Rp 125.000'),
-            Text('• ${result['recurringCount']} Karyawan Lama: dipotong Rp 25.000'),
-            if ((result['interestCollected'] as double? ?? 0) > 0) ...[
-              const SizedBox(height: 6),
-              Text(
-                '• Bunga Pinjaman 1%: ${CoopService.formatRupiah(result['interestCollected'] as double)} '
-                'dibagi rata ke ${result['memberCount']} anggota aktif (+${CoopService.formatRupiah(result['sharePerMember'] as double)}/orang)',
-                style: const TextStyle(color: AppTheme.successGreen, fontWeight: FontWeight.w600, fontSize: 12.5),
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Pengaturan Koperasi & Sistem',
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800, color: AppTheme.textDark),
+                    ),
+                    Text(
+                      'KOPKAR PT Budi Berlian Motor • Panel Pengurus',
+                      style: TextStyle(fontSize: 11, color: AppTheme.textMuted),
+                    ),
+                  ],
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => Navigator.pop(sheetCtx),
+                ),
+              ],
+            ),
             const Divider(height: 20),
-            Text(
-              'Total Terkumpul: ${CoopService.formatRupiah(result['totalDeducted'] as double)}',
-              style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryBlue),
+
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: AppTheme.pastelBlueBg, borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.account_balance_rounded, color: AppTheme.primaryBlue, size: 20),
+              ),
+              title: const Text('Rekening Resmi Koperasi', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold)),
+              subtitle: Text(
+                '${coopService.coopBankName} - ${coopService.coopBankAccountNumber}',
+                style: const TextStyle(fontSize: 11, color: AppTheme.textMuted),
+              ),
+              trailing: const Icon(Icons.chevron_right_rounded, color: AppTheme.textLight),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _showEditCoopBankDialog(context);
+              },
+            ),
+
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: AppTheme.pastelGreenBg, borderRadius: BorderRadius.circular(10)),
+                child: const Icon(Icons.shield_rounded, color: AppTheme.successGreen, size: 20),
+              ),
+              title: const Text('Proteksi Keamanan Anti-Maling', style: TextStyle(fontSize: 13.5, fontWeight: FontWeight.bold)),
+              subtitle: const Text('Dual-Token Rotasi, Hardware MAC, Auto-Lock 3 Menit', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+              trailing: const Icon(Icons.chevron_right_rounded, color: AppTheme.textLight),
+              onTap: () {
+                Navigator.pop(sheetCtx);
+                _showAdminTokenSecurityDialog(context, coopService);
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            // Danger Zone Box
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEF2F2),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFFCA5A5)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: AppTheme.dangerRed, size: 18),
+                      SizedBox(width: 8),
+                      Text(
+                        'Zona Bahaya (Danger Zone)',
+                        style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13, color: AppTheme.dangerRed),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Kosongkan seluruh data anggota, pinjaman, dan transaksi agar siap memulai pendaftaran karyawan baru dari awal. Diperlukan verifikasi PIN/Password Admin.',
+                    style: TextStyle(fontSize: 11, color: AppTheme.textDark, height: 1.35),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 42,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showConfirmResetWithPinDialog(context),
+                      icon: const Icon(Icons.lock_reset_rounded, size: 16),
+                      label: const Text('Reset & Kosongkan Seluruh Data', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.dangerRed,
+                        side: const BorderSide(color: AppTheme.dangerRed),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx),
-            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue, foregroundColor: Colors.white),
-            child: const Text('Selesai'),
-          ),
-        ],
+      ),
+    );
+  }
+
+  void _showConfirmResetWithPinDialog(BuildContext context) {
+    final pinController = TextEditingController();
+    bool isObscured = true;
+    String? errorMessage;
+
+    showDialog(
+      context: context,
+      builder: (dialogCtx) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
+                    color: AppTheme.pastelPinkBg,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.warning_rounded, color: AppTheme.dangerRed, size: 24),
+                ),
+                const SizedBox(width: 10),
+                const Expanded(
+                  child: Text(
+                    'Verifikasi Reset Data',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ],
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.pastelPinkBg,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppTheme.dangerRed.withValues(alpha: 0.3)),
+                    ),
+                    child: const Text(
+                      '⚠️ PERINGATAN: Seluruh data anggota, riwayat transaksi, mutasi simpanan, dan pinjaman akan DIKOSONGKAN TOTAL agar Anda dapat memulai pendaftaran karyawan dari awal. Akun Pengurus Admin tetap tersimpan.',
+                      style: TextStyle(fontSize: 11.5, color: AppTheme.dangerRed, height: 1.4),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Masukkan PIN Keamanan / Password Admin:',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    controller: pinController,
+                    obscureText: isObscured,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: 'PIN (123456) atau Password Admin',
+                      hintStyle: const TextStyle(fontSize: 12, color: AppTheme.textLight),
+                      prefixIcon: const Icon(Icons.lock_rounded, size: 18, color: AppTheme.primaryBlue),
+                      suffixIcon: IconButton(
+                        icon: Icon(isObscured ? Icons.visibility_off_rounded : Icons.visibility_rounded, size: 18),
+                        onPressed: () => setDialogState(() => isObscured = !isObscured),
+                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    ),
+                  ),
+                  if (errorMessage != null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      errorMessage!,
+                      style: const TextStyle(color: AppTheme.dangerRed, fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () {
+                  final input = pinController.text.trim();
+                  final currentAdminPassword = coopService.currentAdmin?.password ?? 'admin123';
+                  final isValid = input == '123456' || input == currentAdminPassword;
+
+                  if (!isValid) {
+                    setDialogState(() {
+                      errorMessage = '❌ PIN atau Password Admin salah! Reset dibatalkan.';
+                    });
+                    return;
+                  }
+
+                  coopService.resetToDefaultDemoData();
+                  Navigator.pop(dialogCtx); // close PIN dialog
+                  Navigator.pop(context); // close Settings bottom sheet
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('✅ Seluruh data berhasil dikosongkan! Siap untuk pendaftaran karyawan baru.'),
+                      backgroundColor: AppTheme.successGreen,
+                      duration: Duration(seconds: 3),
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.delete_forever_rounded, size: 18),
+                label: const Text('Kosongkan Data'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.dangerRed,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+              ),
+            ],
+          );
+        },
       ),
     );
   }
@@ -2231,541 +1181,6 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     );
   }
 
-  bool _requirePermission(BuildContext context, bool allowed, String requiredRoleLabel) {
-    if (allowed) return true;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '🔒 Akses dibatasi: Tindakan ini memerlukan wewenang $requiredRoleLabel.',
-        ),
-        backgroundColor: AppTheme.dangerRed,
-      ),
-    );
-    return false;
-  }
-
-  /// Modal Panduan Langkah demi Langkah Pencairan Pinjaman via Transfer Bank Koperasi
-  void _showDisburseLoanDialog(BuildContext context, LoanModel loan, MemberModel? borrower) {
-    if (!_requirePermission(context, coopService.currentAdmin?.canApproveFinance ?? true, 'Bendahara / Super Admin')) {
-      return;
-    }
-    final refCtrl = TextEditingController();
-    final bankName = borrower?.bankName ?? 'Bank Karyawan';
-    final accNumber = borrower?.bankAccountNumber ?? '-';
-    final availableCash = coopService.availableCashForLoans;
-    final isCashInsufficient = loan.amount > availableCash;
-    String? proofBase64;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.account_balance_rounded, color: AppTheme.primaryBlue),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Panduan Transfer Pencairan Pinjaman',
-                style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (isCashInsufficient) ...[
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppTheme.pastelPinkBg,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: AppTheme.dangerRed.withValues(alpha: 0.45)),
-                  ),
-                  child: Text(
-                    '⚠️ PERINGATAN KAS KOPERASI:\n'
-                    'Kas Tunai Siap Dipinjamkan saat ini (${CoopService.formatRupiah(availableCash)}) '
-                    'lebih kecil dari pengajuan pinjaman (${CoopService.formatRupiah(loan.amount)}). '
-                    'Pastikan saldo riil rekening bank koperasi mencukupi sebelum transfer.',
-                    style: const TextStyle(fontSize: 11.5, color: AppTheme.dangerRed, fontWeight: FontWeight.w700, height: 1.35),
-                  ),
-                ),
-                const SizedBox(height: 10),
-              ],
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppTheme.pastelYellowBg,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppTheme.warningOrange.withValues(alpha: 0.4)),
-                ),
-                child: const Text(
-                  '💡 PENTING (Alur Pencairan Uang Asli):\n'
-                  'Aplikasi ini adalah sistem pembukuan koperasi (bukan M-Banking otomatis). '
-                  'Ikuti 3 langkah mudah di bawah ini untuk mencairkan dana ke karyawan:',
-                  style: TextStyle(fontSize: 11.5, color: AppTheme.textDark, height: 1.35),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Langkah 1: Salin Nomor Rekening & Nominal Karyawan',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryBlueDark),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryBlueLight,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Penerima: ${loan.memberName}',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '$bankName • $accNumber',
-                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: AppTheme.primaryBlueDark),
-                          ),
-                        ),
-                        TextButton.icon(
-                          onPressed: () {
-                            Clipboard.setData(ClipboardData(text: accNumber));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('📋 No. Rekening $accNumber disalin!')),
-                            );
-                          },
-                          icon: const Icon(Icons.copy_rounded, size: 15),
-                          label: const Text('Salin Rek', style: TextStyle(fontSize: 11.5)),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Nominal Cair: ${CoopService.formatRupiah(loan.amount)}',
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13.5, color: AppTheme.successGreen),
-                          ),
-                        ),
-                        TextButton.icon(
-                          onPressed: () {
-                            Clipboard.setData(ClipboardData(text: loan.amount.toInt().toString()));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('📋 Nominal transfer disalin!')),
-                            );
-                          },
-                          icon: const Icon(Icons.copy_rounded, size: 15),
-                          label: const Text('Salin Nominal', style: TextStyle(fontSize: 11.5)),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Langkah 2: Transfer via M-Banking / Internet Banking Koperasi',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryBlueDark),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Buka aplikasi bank perusahaan/koperasi Anda (${coopService.coopBankName}), lalu transfer sebesar ${CoopService.formatRupiah(loan.amount)} ke rekening $bankName $accNumber a.n. ${loan.memberName}.',
-                style: const TextStyle(fontSize: 11.5, color: AppTheme.textMuted, height: 1.35),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Langkah 3: Unggah Foto Bukti Transfer & Konfirmasi',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryBlueDark),
-              ),
-              const SizedBox(height: 6),
-              TransferProofPicker(
-                onChanged: (b64) => proofBase64 = b64,
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: refCtrl,
-                decoration: InputDecoration(
-                  labelText: 'Catatan / No. Referensi Bukti Transfer (Opsional)',
-                  hintText: 'Contoh: Sudah TF via Mandiri Bisnis',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Belum Transfer (Batal)')),
-          ElevatedButton.icon(
-            onPressed: () {
-              if (proofBase64 == null || proofBase64!.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('⚠️ Wajib unggah/masukkan foto bukti transfer terlebih dahulu!'),
-                    backgroundColor: AppTheme.dangerRed,
-                  ),
-                );
-                return;
-              }
-              coopService.approveLoan(loan.id, proofImageBase64: proofBase64);
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    '✅ Pinjaman ${loan.memberName} (${CoopService.formatRupiah(loan.amount)}) beserta foto bukti TF dikonfirmasi cair!',
-                  ),
-                  backgroundColor: AppTheme.successGreen,
-                ),
-              );
-            },
-            icon: const Icon(Icons.check_circle_rounded, size: 17),
-            label: const Text('Sudah Ditransfer — Aktifkan Pinjaman'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.successGreen,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Modal Panduan 3 Langkah Pencairan Tarik Simpanan Sukarela ke Rekening Karyawan
-  void _showDisburseWithdrawalDialog(BuildContext context, TransactionModel wd, MemberModel? member) {
-    final refCtrl = TextEditingController();
-    final bankName = member?.bankName ?? 'Bank Karyawan';
-    final accNumber = member?.bankAccountNumber ?? '-';
-    String? proofBase64;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.account_balance_wallet_rounded, color: AppTheme.primaryBlue),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Panduan Transfer Tarik Simpanan Sukarela',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppTheme.pastelYellowBg,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppTheme.warningOrange.withValues(alpha: 0.4)),
-                ),
-                child: const Text(
-                  '💡 Pastikan Anda mentransfer dana terlebih dahulu dari rekening koperasi ke rekening karyawan di bawah ini, lalu unggah foto bukti transfer sebelum klik "Sudah Ditransfer".',
-                  style: TextStyle(fontSize: 11.5, color: AppTheme.textDark, height: 1.35),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Langkah 1: Salin Rekening & Nominal Pencairan',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryBlueDark),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryBlueLight,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Penerima: ${wd.memberName}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '$bankName • $accNumber',
-                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: AppTheme.primaryBlueDark),
-                          ),
-                        ),
-                        TextButton.icon(
-                          onPressed: () {
-                            Clipboard.setData(ClipboardData(text: accNumber));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('📋 No. Rekening $accNumber disalin!')),
-                            );
-                          },
-                          icon: const Icon(Icons.copy_rounded, size: 15),
-                          label: const Text('Salin Rek', style: TextStyle(fontSize: 11.5)),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Nominal Cair: ${CoopService.formatRupiah(wd.amount)}',
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13.5, color: AppTheme.successGreen),
-                          ),
-                        ),
-                        TextButton.icon(
-                          onPressed: () {
-                            Clipboard.setData(ClipboardData(text: wd.amount.toInt().toString()));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('📋 Nominal penarikan disalin!')),
-                            );
-                          },
-                          icon: const Icon(Icons.copy_rounded, size: 15),
-                          label: const Text('Salin Nominal', style: TextStyle(fontSize: 11.5)),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Langkah 2: Unggah Foto Bukti Transfer & Catatan',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryBlueDark),
-              ),
-              const SizedBox(height: 6),
-              TransferProofPicker(
-                onChanged: (b64) => proofBase64 = b64,
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: refCtrl,
-                decoration: InputDecoration(
-                  labelText: 'Catatan / No. Referensi Transfer (Opsional)',
-                  hintText: 'Contoh: Sudah TF ke rek karyawan',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-          ElevatedButton.icon(
-            onPressed: () {
-              if (proofBase64 == null || proofBase64!.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('⚠️ Wajib unggah/masukkan foto bukti transfer terlebih dahulu!'),
-                    backgroundColor: AppTheme.dangerRed,
-                  ),
-                );
-                return;
-              }
-              final ok = coopService.approvePendingWithdrawal(wd.id, proofImageBase64: proofBase64);
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    ok
-                        ? '✅ Penarikan Simpanan Sukarela ${wd.memberName} (${CoopService.formatRupiah(wd.amount)}) beserta foto bukti TF dikonfirmasi cair!'
-                        : '⚠️ Saldo Simpanan Sukarela anggota tidak mencukupi / terkunci jaminan pinjaman.',
-                  ),
-                  backgroundColor: ok ? AppTheme.successGreen : AppTheme.dangerRed,
-                ),
-              );
-            },
-            icon: const Icon(Icons.check_circle_rounded, size: 17),
-            label: const Text('Sudah Ditransfer — Potong Saldo'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.successGreen,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Modal Panduan 3 Langkah Pencairan Pengembalian Dana Resign (Net Refund)
-  void _showDisburseResignationDialog(BuildContext context, ResignationModel rsg) {
-    final refCtrl = TextEditingController();
-    String? proofBase64;
-
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
-          children: [
-            Icon(Icons.exit_to_app_rounded, color: AppTheme.dangerRed),
-            SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Panduan Transfer Dana Bersih Resign',
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
-              ),
-            ),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppTheme.pastelYellowBg,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: AppTheme.warningOrange.withValues(alpha: 0.4)),
-                ),
-                child: Text(
-                  '💡 Rincian Kalkulasi Otomatis (${rsg.memberName}):\n'
-                  '• Total Simpanan: ${CoopService.formatRupiah(rsg.grossRefund)}\n'
-                  '• Potong Sisa Utang Pinjaman: -${CoopService.formatRupiah(rsg.loanDeduction)}\n'
-                  '• Dana Bersih Ditransfer: ${CoopService.formatRupiah(rsg.netRefund)}',
-                  style: const TextStyle(fontSize: 11.5, color: AppTheme.textDark, height: 1.4),
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Langkah 1: Salin Rekening Tujuan & Dana Bersih',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryBlueDark),
-              ),
-              const SizedBox(height: 6),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryBlueLight,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Penerima: ${rsg.destinationAccountHolder}',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${rsg.destinationBank} • ${rsg.destinationAccountNumber}',
-                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 14, color: AppTheme.primaryBlueDark),
-                          ),
-                        ),
-                        TextButton.icon(
-                          onPressed: () {
-                            Clipboard.setData(ClipboardData(text: rsg.destinationAccountNumber));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('📋 No. Rekening ${rsg.destinationAccountNumber} disalin!')),
-                            );
-                          },
-                          icon: const Icon(Icons.copy_rounded, size: 15),
-                          label: const Text('Salin Rek', style: TextStyle(fontSize: 11.5)),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Dana Bersih: ${CoopService.formatRupiah(rsg.netRefund)}',
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13.5, color: AppTheme.successGreen),
-                          ),
-                        ),
-                        TextButton.icon(
-                          onPressed: () {
-                            Clipboard.setData(ClipboardData(text: rsg.netRefund.toInt().toString()));
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('📋 Nominal dana bersih resign disalin!')),
-                            );
-                          },
-                          icon: const Icon(Icons.copy_rounded, size: 15),
-                          label: const Text('Salin Nominal', style: TextStyle(fontSize: 11.5)),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Langkah 2: Unggah Foto Bukti Transfer & Catat Referensi',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryBlueDark),
-              ),
-              const SizedBox(height: 6),
-              TransferProofPicker(
-                onChanged: (b64) => proofBase64 = b64,
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: refCtrl,
-                decoration: InputDecoration(
-                  labelText: 'Catatan / No. Referensi Transfer (Opsional)',
-                  hintText: 'Contoh: Sudah TF pencairan resign',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Batal')),
-          ElevatedButton.icon(
-            onPressed: () {
-              if (proofBase64 == null || proofBase64!.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('⚠️ Wajib unggah/masukkan foto bukti transfer terlebih dahulu!'),
-                    backgroundColor: AppTheme.dangerRed,
-                  ),
-                );
-                return;
-              }
-              coopService.approveAndDisburseResignation(rsg.id, proofImageBase64: proofBase64);
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('✅ Dana resign ${rsg.memberName} (${CoopService.formatRupiah(rsg.netRefund)}) beserta foto bukti TF berhasil dicairkan & akun ditutup!'),
-                  backgroundColor: AppTheme.successGreen,
-                ),
-              );
-            },
-            icon: const Icon(Icons.check_circle_rounded, size: 17),
-            label: const Text('Sudah Ditransfer — Tutup Akun'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.successGreen,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _showAdminTokenSecurityDialog(BuildContext context, CoopService coop) {
     showDialog(
       context: context,
@@ -2800,8 +1215,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Dual Token & Anti-Theft (JWT)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      Text('Access Token (15 Mnt) + Refresh Token Rotasi', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+                      Text('Proteksi Anti-Maling (Aktif 24/7)', style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.bold)),
+                      Text('Seluruh Keamanan Berjalan Otomatis di Latar Belakang', style: TextStyle(fontSize: 11, color: AppTheme.textMuted)),
                     ],
                   ),
                 ),
@@ -2809,293 +1224,175 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
             content: SizedBox(
               width: 460,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Pengurus Login:', style: TextStyle(fontSize: 12, color: AppTheme.textMuted)),
-                            Text('${admin?.name} (${admin?.role.label})', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Status Rotasi:', style: TextStyle(fontSize: 12, color: AppTheme.textMuted)),
-                            Text(
-                              isValid ? '🟢 TEROTASI AMAN' : '🔴 KEDALUWARSA / DIBLOKIR',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.bold,
-                                color: isValid ? AppTheme.successGreen : AppTheme.dangerRed,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF8FAFC),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Pengurus Login:', style: TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  '${admin?.name} (${admin?.role.label})',
+                                  textAlign: TextAlign.right,
+                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 6),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('Putaran Rotasi Token:', style: TextStyle(fontSize: 12, color: AppTheme.textMuted)),
-                            Text(
-                              'Putaran #${session?.rotationCount ?? 0}',
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue),
-                            ),
-                          ],
-                        ),
-                      ],
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Status Proteksi:', style: TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+                              const SizedBox(width: 8),
+                              Flexible(
+                                child: Text(
+                                  isValid ? '🟢 AKTIF OTOMATIS' : '🔴 KEDALUWARSA / DIBLOKIR',
+                                  textAlign: TextAlign.right,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: isValid ? AppTheme.successGreen : AppTheme.dangerRed,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Putaran Rotasi Token:', style: TextStyle(fontSize: 12, color: AppTheme.textMuted)),
+                              Text(
+                                'Putaran #${session?.rotationCount ?? 0} (Otomatis)',
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
+                    const SizedBox(height: 10),
 
-                  // Access Token Card
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF1F5F9),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFCBD5E1)),
+                    // Access Token Card
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF1F5F9),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFCBD5E1)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Expanded(
+                                child: Text('1. Access Token (Short-Lived 15 Mnt):', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(access?.remainingFormatted ?? '-', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text('ID: ${access?.tokenId ?? '-'}', style: const TextStyle(fontSize: 10, fontFamily: 'monospace', color: AppTheme.textMuted)),
+                          const Text('🛡️ Otomatis dirotasi di latar belakang tanpa mengganggu aktivitas.', style: TextStyle(fontSize: 9, color: Color(0xFF64748B))),
+                        ],
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('1. Access Token (Short-Lived 15 Mnt):', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                            Text(access?.remainingFormatted ?? '-', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text('ID: ${access?.tokenId ?? '-'}', style: const TextStyle(fontSize: 10, fontFamily: 'monospace', color: AppTheme.textMuted)),
-                        const Text('🛡️ Otomatis hangus cepat agar aman jika disadap di Wi-Fi.', style: TextStyle(fontSize: 9, color: Color(0xFF64748B))),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
+                    const SizedBox(height: 8),
 
-                  // Refresh Token Card
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0FDF4),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppTheme.successGreen.withValues(alpha: 0.3)),
+                    // Refresh Token Card
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFF0FDF4),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.successGreen.withValues(alpha: 0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Expanded(
+                                child: Text('2. Refresh Token (Rotasi Single-Use):', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF166534))),
+                              ),
+                              const SizedBox(width: 6),
+                              Text(refresh?.remainingFormatted ?? '-', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF15803D))),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text('ID: ${refresh?.tokenId ?? '-'}', style: const TextStyle(fontSize: 10, fontFamily: 'monospace', color: Color(0xFF166534))),
+                          const Text('🔒 Anti-Theft Replay Detection aktif memantau dan memblokir duplikasi sesi.', style: TextStyle(fontSize: 9, color: Color(0xFF15803D))),
+                        ],
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text('2. Refresh Token (Rotasi Single-Use):', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF166534))),
-                            Text(refresh?.remainingFormatted ?? '-', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF15803D))),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text('ID: ${refresh?.tokenId ?? '-'}', style: const TextStyle(fontSize: 10, fontFamily: 'monospace', color: Color(0xFF166534))),
-                        const Text('🔒 Anti-Theft: Jika ada hacker memakai ulang token lama, sistem otomatis memutus seluruh sesi!', style: TextStyle(fontSize: 9, color: Color(0xFF15803D))),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
+                    const SizedBox(height: 8),
 
-                  // EncryptedSharedPreferences Hardware Keystore Card
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF5F3FF),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF8B5CF6).withValues(alpha: 0.3)),
+                    // EncryptedSharedPreferences & MAC Hardware Card
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFF6FF),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.3)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Expanded(
+                                child: Text(
+                                  '3. Hardware MAC AES-256 & Anti-CSRF',
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1E40AF)),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(color: const Color(0xFF1E40AF), borderRadius: BorderRadius.circular(8)),
+                                child: const Text('AKTIF OTOMATIS', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white)),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'MAC Perangkat: ${coop.deviceMacAddress}',
+                            style: const TextStyle(fontSize: 10, fontFamily: 'monospace', fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8)),
+                          ),
+                          const SizedBox(height: 2),
+                          const Text(
+                            '🔒 Enkripsi Android Keystore, Kunci MAC Address, FLAG_SECURE Anti-Screenshot, Auto-Lock 3 Menit, dan Anti-CSRF berjalan otomatis.',
+                            style: TextStyle(fontSize: 9, color: Color(0xFF1E3A8A)),
+                          ),
+                        ],
+                      ),
                     ),
-                    child: const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '3. Storage: EncryptedSharedPreferences',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF5B21B6)),
-                            ),
-                            Text(
-                              'AES-256 GCM',
-                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED)),
-                            ),
-                          ],
-                        ),
-                        SizedBox(height: 2),
-                        Text(
-                          '🔐 Android Keystore: Kunci master hardware TEE/SE mengunci seluruh token & data admin dari ancaman USB ADB dump & root explorer.',
-                          style: TextStyle(fontSize: 9, color: Color(0xFF4C1D95)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // MAC Address Token Encryption Card
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEFF6FF),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.3)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              '4. Kunci Token: Hardware MAC Key',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1E40AF)),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(color: const Color(0xFF1E40AF), borderRadius: BorderRadius.circular(8)),
-                              child: const Text('DEVICE BOUND', style: TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: Colors.white)),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          'MAC: ${coop.deviceMacAddress}',
-                          style: const TextStyle(fontSize: 10, fontFamily: 'monospace', fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8)),
-                        ),
-                        Text(
-                          'Ciphertext: ${access?.maskedEncryptedToken ?? '-'}',
-                          style: const TextStyle(fontSize: 9, fontFamily: 'monospace', color: Color(0xFF3B82F6)),
-                        ),
-                        const SizedBox(height: 2),
-                        const Text(
-                          '🔒 Anti-Mentah: Access & Refresh Token dikunci AES-256 menggunakan MAC Address fisik perangkat ini. Mustahil didekripsi jika file disalin ke komputer/HP lain!',
-                          style: TextStyle(fontSize: 9, color: Color(0xFF1E3A8A)),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-
-                  // FLAG_SECURE & Inactivity Auto-Lock Card
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF0FDF4),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppTheme.successGreen.withValues(alpha: 0.3)),
-                    ),
-                    child: const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '5. Proteksi Layar & Auto-Lock',
-                              style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF166534)),
-                            ),
-                            Text('AKTIF', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppTheme.successGreen)),
-                          ],
-                        ),
-                        SizedBox(height: 2),
-                        Text('🛡️ FLAG_SECURE: Screenshot & screen recording diblokir di HP.', style: TextStyle(fontSize: 9, color: Color(0xFF166534))),
-                        Text('⏱️ Inactivity Auto-Lock: Layar terkunci jika tidak ada sentuhan 3 menit.', style: TextStyle(fontSize: 9, color: Color(0xFF166534))),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Tutup')),
-              OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  coop.lockAppNow();
-                },
-                icon: const Icon(Icons.lock_clock_rounded, size: 15),
-                label: const Text('Kunci Layar', style: TextStyle(fontSize: 11)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF7C3AED),
-                  side: const BorderSide(color: Color(0xFF7C3AED)),
-                ),
-              ),
-              OutlinedButton.icon(
-                onPressed: () {
-                  final ok = coop.simulateForeignDeviceMacAttack();
-                  if (ok) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('🛡️ TERBUKTI AMAN: File dicoba didekripsi di MAC asing -> Ditolak & token gagal terbaca!'),
-                        backgroundColor: Color(0xFF1E3A8A),
-                        behavior: SnackBarBehavior.floating,
-                        duration: Duration(seconds: 4),
-                      ),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.phonelink_erase_rounded, size: 15),
-                label: const Text('Uji MAC Asing', style: TextStyle(fontSize: 11)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF1E40AF),
-                  side: const BorderSide(color: Color(0xFF3B82F6)),
-                ),
-              ),
-              OutlinedButton.icon(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  coop.simulateTokenTheftAttack();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('🚨 ALARM AKTIF: Upaya Pencurian Token Terdeteksi! Sesi otomatis dibatalkan.'),
-                      backgroundColor: AppTheme.dangerRed,
-                      behavior: SnackBarBehavior.floating,
-                      duration: Duration(seconds: 4),
-                    ),
-                  );
-                },
-                icon: const Icon(Icons.bug_report_rounded, size: 16),
-                label: const Text('Uji Replay'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppTheme.dangerRed,
-                  side: const BorderSide(color: AppTheme.dangerRed),
-                ),
-              ),
-              ElevatedButton.icon(
-                onPressed: () {
-                  final ok = coop.rotateTokenSession();
-                  if (ok) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('🔄 Refresh Token Admin Berhasil Diputar & Token Lama Dihancurkan!'),
-                        backgroundColor: AppTheme.successGreen,
-                        behavior: SnackBarBehavior.floating,
-                      ),
-                    );
-                  }
-                },
-                icon: const Icon(Icons.sync_rounded, size: 16),
-                label: const Text('Putar Token'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryBlue,
-                  foregroundColor: Colors.white,
-                ),
-              ),
             ],
           );
         },

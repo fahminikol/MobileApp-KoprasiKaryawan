@@ -16,11 +16,17 @@ class SupabaseConfig {
     defaultValue: 'sb_publishable_D9RsDp3QLeHXEoJm69eoyg_U03A2NGV',
   );
 
-  // Endpoint Sync Server Lokal (Cadangan otomatis saat di Wi-Fi yang sama)
+  // Endpoint Sync Server Lokal (Cadangan otomatis saat di Wi-Fi / USB yang sama)
   static const String localSyncServerUrl = String.fromEnvironment(
     'SYNC_SERVER_URL',
-    defaultValue: 'http://192.168.18.119:8082/api/state',
+    defaultValue: 'http://192.168.18.121:8082/api/state',
   );
+
+  static const List<String> _localSyncEndpoints = [
+    'http://127.0.0.1:8082/api/state',
+    localSyncServerUrl,
+    'http://192.168.18.119:8082/api/state',
+  ];
 
   static bool get isConfigured =>
       supabaseUrl.isNotEmpty &&
@@ -52,7 +58,7 @@ class SupabaseConfig {
               },
               body: body,
             )
-            .timeout(const Duration(seconds: 4));
+            .timeout(const Duration(seconds: 25));
         return supResp.statusCode >= 200 && supResp.statusCode < 300;
       } catch (_) {
         return false;
@@ -60,18 +66,21 @@ class SupabaseConfig {
     }
 
     Future<bool> pushLocal() async {
-      try {
-        final localResp = await http
-            .post(
-              Uri.parse(localSyncServerUrl),
-              headers: {'Content-Type': 'application/json'},
-              body: jsonPayload,
-            )
-            .timeout(const Duration(milliseconds: 1200));
-        return localResp.statusCode >= 200 && localResp.statusCode < 300;
-      } catch (_) {
-        return false;
+      for (final endpoint in _localSyncEndpoints) {
+        try {
+          final localResp = await http
+              .post(
+                Uri.parse(endpoint),
+                headers: {'Content-Type': 'application/json'},
+                body: jsonPayload,
+              )
+              .timeout(const Duration(milliseconds: 900));
+          if (localResp.statusCode >= 200 && localResp.statusCode < 300) {
+            return true;
+          }
+        } catch (_) {}
       }
+      return false;
     }
 
     final results = await Future.wait([pushCloud(), pushLocal()]);
@@ -94,7 +103,7 @@ class SupabaseConfig {
                 'Accept': 'application/json',
               },
             )
-            .timeout(const Duration(seconds: 3));
+            .timeout(const Duration(seconds: 20));
         if (resp.statusCode >= 200 && resp.statusCode < 300) {
           final list = jsonDecode(resp.body) as List;
           if (list.isNotEmpty) {
@@ -107,18 +116,20 @@ class SupabaseConfig {
     }
 
     Future<Map<String, dynamic>?> pullLocal() async {
-      try {
-        final localResp = await http
-            .get(
-              Uri.parse(localSyncServerUrl),
-              headers: {'Accept': 'application/json'},
-            )
-            .timeout(const Duration(milliseconds: 1200));
-        if (localResp.statusCode >= 200 && localResp.statusCode < 300) {
-          final decoded = jsonDecode(localResp.body) as Map<String, dynamic>;
-          if (decoded['members'] != null) return decoded;
-        }
-      } catch (_) {}
+      for (final endpoint in _localSyncEndpoints) {
+        try {
+          final localResp = await http
+              .get(
+                Uri.parse(endpoint),
+                headers: {'Accept': 'application/json'},
+              )
+              .timeout(const Duration(milliseconds: 900));
+          if (localResp.statusCode >= 200 && localResp.statusCode < 300) {
+            final decoded = jsonDecode(localResp.body) as Map<String, dynamic>;
+            if (decoded['members'] != null) return decoded;
+          }
+        } catch (_) {}
+      }
       return null;
     }
 

@@ -18,12 +18,19 @@ void main() {
 
     setUp(() {
       coop.resetToDefaultDemoData();
+      coop.seedDemoMembersForTesting();
     });
 
     test('Active member count only includes MemberStatus.active', () {
       // Seed data has Agus (active) and Sarah (pendingResign); Dimas (and his loan) was removed
       expect(coop.activeMemberCount, 1);
       expect(coop.totalMonthlyLoanInterestPool, 0.0);
+      expect(coop.monthlyInterestSharePerMember, 0.0);
+    });
+
+    test('Active member count is 0 when all members are cleared', () {
+      coop.resetToDefaultDemoData();
+      expect(coop.activeMemberCount, 0);
       expect(coop.monthlyInterestSharePerMember, 0.0);
     });
 

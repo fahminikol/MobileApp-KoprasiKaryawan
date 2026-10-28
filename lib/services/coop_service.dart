@@ -18,12 +18,13 @@ class CoopService extends ChangeNotifier {
   CoopService._internal() {
     _initializeSeedData();
     _loadFromLocalStorage();
-    _startRealtimeCloudSync();
   }
 
   Timer? _saveDebounceTimer;
   Timer? _realtimeSyncTimer;
   bool _isPullingRemote = false;
+  bool _isPushingRemote = false;
+  DateTime? _lastLocalMutationAt;
   int _stateUpdatedAtMs = 0;
   int _txSequence = 1000;
   DateTime? _lastCloudSyncAt;
@@ -48,10 +49,23 @@ class CoopService extends ChangeNotifier {
 
   @override
   void notifyListeners() {
-    _stateUpdatedAtMs = DateTime.now().millisecondsSinceEpoch;
+    final nowMs = DateTime.now().millisecondsSinceEpoch;
+    _stateUpdatedAtMs =
+        nowMs > _stateUpdatedAtMs ? nowMs : (_stateUpdatedAtMs + 1);
+    _lastLocalMutationAt = DateTime.now();
     _invalidateCache();
     super.notifyListeners();
     _scheduleSaveToLocalStorage();
+  }
+
+  /// Update UI lokal (misal saat login/unlock/rotasi token) tanpa menimpa data keuangan di Cloud,
+  /// lalu langsung tarik data terbaru dari Cloud agar saldo & bukti transaksi selalu real-time.
+  void _notifySessionOnly({bool pullRemote = true}) {
+    _invalidateCache();
+    super.notifyListeners();
+    if (pullRemote && !PlatformStorageHelper.isFlutterTest) {
+      Future.microtask(() => _pullRemoteUpdates(force: true));
+    }
   }
 
   Map<String, dynamic> _exportStateMap() => {
@@ -80,7 +94,7 @@ class CoopService extends ChangeNotifier {
   void _startRealtimeCloudSync() {
     if (PlatformStorageHelper.isFlutterTest) return;
     // Tarik data terbaru saat aplikasi pertama kali dibuka
-    Future.microtask(_pullRemoteUpdates);
+    Future.microtask(() => _pullRemoteUpdates(force: true));
     // Polling otomatis setiap 3 detik + Silent Refresh Token jika Access Token hampir kedaluwarsa
     _realtimeSyncTimer?.cancel();
     _realtimeSyncTimer = Timer.periodic(
@@ -95,18 +109,35 @@ class CoopService extends ChangeNotifier {
     );
   }
 
-  Future<void> _pullRemoteUpdates() async {
-    if (_isPullingRemote) return;
+  /// Tarik data terbaru dari Cloud secara instan (misal saat aplikasi dibuka kembali dari Recent Apps)
+  Future<void> pullRemoteUpdatesNow() => _pullRemoteUpdates(force: true);
+
+  Future<void> _pullRemoteUpdates({bool force = false}) async {
+    if (_isPullingRemote || _isPushingRemote) return;
+    if (_saveDebounceTimer?.isActive == true) return;
+    if (!force &&
+        _lastLocalMutationAt != null &&
+        DateTime.now().difference(_lastLocalMutationAt!).inSeconds < 4) {
+      return;
+    }
     _isPullingRemote = true;
     try {
       final remote = await SupabaseConfig.pullStateFromSupabase();
       if (remote != null) {
+        if (_isPushingRemote || _saveDebounceTimer?.isActive == true) return;
+        if (!force &&
+            _lastLocalMutationAt != null &&
+            DateTime.now().difference(_lastLocalMutationAt!).inSeconds < 4) {
+          return;
+        }
         final remoteTs = (remote['updatedAtMs'] as num?)?.toInt() ?? 0;
         if (remoteTs > _stateUpdatedAtMs) {
           _stateUpdatedAtMs = remoteTs;
           final purged = _applyDecodedState(remote);
           if (purged) {
-            _stateUpdatedAtMs = DateTime.now().millisecondsSinceEpoch;
+            final nowMs = DateTime.now().millisecondsSinceEpoch;
+            _stateUpdatedAtMs =
+                nowMs > _stateUpdatedAtMs ? nowMs : (_stateUpdatedAtMs + 1);
             final cleanedData = _exportStateMap();
             await PlatformStorageHelper.writeLocalState(jsonEncode(cleanedData));
             await SupabaseConfig.pushStateToSupabase(cleanedData);
@@ -116,6 +147,19 @@ class CoopService extends ChangeNotifier {
           _lastCloudSyncAt = DateTime.now();
           _invalidateCache();
           super.notifyListeners();
+        } else if (_stateUpdatedAtMs > remoteTs && _stateUpdatedAtMs > 0) {
+          // Perangkat ini memiliki data transaksi lokal yang lebih baru daripada Cloud
+          // (misal saat upload bukti foto sebelumnya sempat tertunda) -> otomatis dorong ke Cloud!
+          final nowMs = DateTime.now().millisecondsSinceEpoch;
+          _stateUpdatedAtMs =
+              nowMs > _stateUpdatedAtMs ? nowMs : (_stateUpdatedAtMs + 1);
+          final localData = _exportStateMap();
+          await PlatformStorageHelper.writeLocalState(jsonEncode(localData));
+          final pushed = await SupabaseConfig.pushStateToSupabase(localData);
+          if (pushed) {
+            _lastCloudSyncAt = DateTime.now();
+            super.notifyListeners();
+          }
         }
       }
     } catch (_) {
@@ -171,6 +215,7 @@ class CoopService extends ChangeNotifier {
   void _scheduleSaveToLocalStorage() {
     _saveDebounceTimer?.cancel();
     _saveDebounceTimer = Timer(const Duration(milliseconds: 150), () async {
+      _isPushingRemote = true;
       try {
         final data = _exportStateMap();
         await PlatformStorageHelper.writeLocalState(jsonEncode(data));
@@ -178,7 +223,10 @@ class CoopService extends ChangeNotifier {
         if (pushed) {
           _lastCloudSyncAt = DateTime.now();
         }
-      } catch (_) {}
+      } catch (_) {
+      } finally {
+        _isPushingRemote = false;
+      }
     });
   }
 
@@ -187,9 +235,9 @@ class CoopService extends ChangeNotifier {
     try {
       await _pullRemoteUpdates();
       _purgeRemovedDemoAccounts();
-      if (_stateUpdatedAtMs == 0) {
-        _stateUpdatedAtMs = DateTime.now().millisecondsSinceEpoch;
-      }
+      final nowMs = DateTime.now().millisecondsSinceEpoch;
+      _stateUpdatedAtMs =
+          nowMs > _stateUpdatedAtMs ? nowMs : (_stateUpdatedAtMs + 1);
       final data = _exportStateMap();
       final ok = await SupabaseConfig.pushStateToSupabase(data);
       if (ok) {
@@ -248,8 +296,18 @@ class CoopService extends ChangeNotifier {
       }
     }
     if (decoded['transactions'] != null) {
+      final prevById = {for (final t in _transactions) t.id: t};
       final loaded = (decoded['transactions'] as List)
-          .map((e) => TransactionModel.fromJson(e as Map<String, dynamic>))
+          .map((e) {
+            final tx = TransactionModel.fromJson(e as Map<String, dynamic>);
+            final prev = prevById[tx.id];
+            if ((tx.proofImageBase64 == null || tx.proofImageBase64!.isEmpty) &&
+                prev?.proofImageBase64 != null &&
+                prev!.proofImageBase64!.isNotEmpty) {
+              return tx.copyWith(proofImageBase64: prev.proofImageBase64);
+            }
+            return tx;
+          })
           .toList();
       if (loaded.isNotEmpty) {
         _transactions
@@ -258,8 +316,23 @@ class CoopService extends ChangeNotifier {
       }
     }
     if (decoded['loans'] != null) {
+      final prevById = {for (final l in _loans) l.id: l};
       final loaded = (decoded['loans'] as List)
-          .map((e) => LoanModel.fromJson(e as Map<String, dynamic>))
+          .map((e) {
+            final ln = LoanModel.fromJson(e as Map<String, dynamic>);
+            final prev = prevById[ln.id];
+            return ln.copyWith(
+              disbursementProofBase64: (ln.disbursementProofBase64 == null ||
+                      ln.disbursementProofBase64!.isEmpty)
+                  ? prev?.disbursementProofBase64
+                  : ln.disbursementProofBase64,
+              earlySettlementProofBase64:
+                  (ln.earlySettlementProofBase64 == null ||
+                          ln.earlySettlementProofBase64!.isEmpty)
+                      ? prev?.earlySettlementProofBase64
+                      : ln.earlySettlementProofBase64,
+            );
+          })
           .toList();
       if (loaded.isNotEmpty) {
         _loans
@@ -315,37 +388,43 @@ class CoopService extends ChangeNotifier {
           (decoded['blacklistedFamilyIds'] as List).map((e) => e.toString()),
         );
     }
-    if (decoded['activeAuthSession'] != null) {
+    // Jangan menimpa sesi login aktif di perangkat ini dengan sesi portal lain (misal Member menimpa Admin)
+    if (decoded['activeAuthSession'] != null && !_isLoggedIn) {
       try {
         final parsed = AuthSession.fromJson(
           decoded['activeAuthSession'] as Map<String, dynamic>,
           _deviceMacAddress,
         );
-        // Validasi keaslian token setelah didekripsi dengan Hardware MAC Key
         final validAccess =
             TokenService.verifyAndParseToken(parsed.accessToken.rawToken);
         final validRefresh =
             TokenService.verifyAndParseToken(parsed.refreshToken.rawToken);
 
+        final isRoleCompatible = (_isAdminPortalOnly || _isAdminMode)
+            ? parsed.accessToken.role != 'member'
+            : parsed.accessToken.role == 'member';
+
         if (validAccess != null &&
             validRefresh != null &&
             parsed.isSessionAlive &&
+            isRoleCompatible &&
             !_blacklistedFamilyIds.contains(parsed.familyId)) {
           _currentAuthSession = parsed;
-        } else {
-          // Token gagal didekripsi karena MAC tidak cocok (dibajak/disalin ke HP lain)
-          _currentAuthSession = null;
         }
-      } catch (_) {
-        _currentAuthSession = null;
+      } catch (_) {}
+    }
+    // Pastikan sesi token selalu sinkron dengan akun yang sedang aktif
+    if (_isAdminMode && _currentAdmin != null) {
+      if (_currentAuthSession == null ||
+          _currentAuthSession!.accessToken.subjectId != _currentAdmin!.id) {
+        _currentAuthSession = TokenService.createAdminSession(_currentAdmin!);
       }
+    } else if (!_isAdminMode && _currentMember != null && _currentAuthSession == null) {
+      _currentAuthSession = TokenService.createMemberSession(_currentMember!);
     }
-    if (decoded['isFlagSecureEnabled'] != null) {
-      _isFlagSecureEnabled = decoded['isFlagSecureEnabled'] as bool;
-    }
-    if (decoded['isAutoLockEnabled'] != null) {
-      _isAutoLockEnabled = decoded['isAutoLockEnabled'] as bool;
-    }
+    // Selalu pastikan proteksi layar (FLAG_SECURE) & Kunci Otomatis (Auto-Lock) aktif otomatis di latar belakang
+    _isFlagSecureEnabled = true;
+    _isAutoLockEnabled = true;
     if (decoded['autoLockTimeoutSeconds'] != null) {
       _autoLockTimeoutSeconds = (decoded['autoLockTimeoutSeconds'] as num).toInt();
     }
@@ -362,7 +441,8 @@ class CoopService extends ChangeNotifier {
       }
     } catch (_) {}
 
-    // 2. Ambil data terenkripsi dari Android EncryptedSharedPreferences (AES-256 GCM) & Hardware MAC
+    // 2. Ambil data terenkripsi dari Android EncryptedSharedPreferences (AES-256 GCM) & Hardware MAC,
+    //    TANPA memicu notifyListeners() agar tidak menimpa data terbaru di Cloud dengan cache lokal lama!
     Future.microtask(() async {
       try {
         final mac = await PlatformStorageHelper.getDeviceMacAddress();
@@ -373,14 +453,14 @@ class CoopService extends ChangeNotifier {
         final secureJson = await PlatformStorageHelper.readLocalStateAsync();
         if (secureJson != null && secureJson.isNotEmpty) {
           final decoded = jsonDecode(secureJson) as Map<String, dynamic>;
-          final purged = _applyDecodedState(decoded);
-          if (purged) {
-            _stateUpdatedAtMs = DateTime.now().millisecondsSinceEpoch;
-            _scheduleSaveToLocalStorage();
-          }
-          notifyListeners();
+          _applyDecodedState(decoded);
+          _invalidateCache();
+          super.notifyListeners();
         }
-      } catch (_) {}
+      } catch (_) {
+      } finally {
+        _startRealtimeCloudSync();
+      }
     });
   }
 
@@ -393,10 +473,17 @@ class CoopService extends ChangeNotifier {
     _resignations.clear();
     _executedPayrollPeriods.clear();
     _securityLogs.clear();
+    _currentMember = null;
+    _currentAuthSession = null;
     _coopBankName = 'Bank Mandiri';
     _coopBankAccountNumber = '114-00-8899776-5';
     _coopBankAccountHolder = 'KOPKAR PT Budi Berlian Motor';
     _initializeSeedData();
+    _stateUpdatedAtMs = DateTime.now().millisecondsSinceEpoch;
+    final data = _exportStateMap();
+    PlatformStorageHelper.writeLocalState(jsonEncode(data));
+    SupabaseConfig.pushStateToSupabase(data);
+    _invalidateCache();
     notifyListeners();
   }
 
@@ -447,7 +534,7 @@ class CoopService extends ChangeNotifier {
     if (!_isAppLocked) {
       _isAppLocked = true;
       addSecurityLog('Sesi Terkunci Otomatis (Inactivity Timeout)');
-      notifyListeners();
+      _notifySessionOnly(pullRemote: false);
     }
   }
 
@@ -460,7 +547,7 @@ class CoopService extends ChangeNotifier {
         _failedPinAttempts = 0;
         _pinLockoutUntil = null;
         addSecurityLog('Kunci Aplikasi Dibuka oleh Admin');
-        notifyListeners();
+        _notifySessionOnly(pullRemote: true);
         return true;
       }
     } else {
@@ -468,7 +555,7 @@ class CoopService extends ChangeNotifier {
       if (ok) {
         _isAppLocked = false;
         addSecurityLog('Kunci Aplikasi Dibuka dengan PIN (${_currentMember?.name ?? "Karyawan"})');
-        notifyListeners();
+        _notifySessionOnly(pullRemote: true);
         return true;
       }
     }
@@ -480,7 +567,7 @@ class CoopService extends ChangeNotifier {
     _failedPinAttempts = 0;
     _pinLockoutUntil = null;
     addSecurityLog('Kunci Aplikasi Dibuka dengan Biometrik');
-    notifyListeners();
+    _notifySessionOnly(pullRemote: true);
   }
 
   // ==========================================
@@ -639,7 +726,7 @@ class CoopService extends ChangeNotifier {
       addSecurityLog(
         'Rotasi Token Sesi Berhasil (Putaran #${_currentAuthSession!.rotationCount})',
       );
-      notifyListeners();
+      _notifySessionOnly(pullRemote: false);
       return true;
     }
 
@@ -725,6 +812,12 @@ class CoopService extends ChangeNotifier {
       // Izinkan pemanggilan internal / unit test tanpa sesi admin aktif
       return true;
     }
+    // Pastikan sesi token selalu sinkron dengan akun pengurus yang sedang login
+    // (mencegah sesi token tertimpa oleh sesi member dari sinkronisasi cloud)
+    if (_currentAuthSession == null ||
+        _currentAuthSession!.accessToken.subjectId != _currentAdmin!.id) {
+      _currentAuthSession = TokenService.createAdminSession(_currentAdmin!);
+    }
     final roleAllowed = _currentAdmin!.hasScope(requiredScope);
     final tokenAllowed = _currentAuthSession == null ||
         _currentAuthSession!.accessToken.scopes.isEmpty ||
@@ -756,6 +849,11 @@ class CoopService extends ChangeNotifier {
       );
       notifyListeners();
       return false;
+    }
+    if (!_isAdminMode &&
+        (_currentAuthSession == null ||
+            _currentAuthSession!.accessToken.subjectId != _currentMember!.id)) {
+      _currentAuthSession = TokenService.createMemberSession(_currentMember!);
     }
     if (_currentAuthSession != null &&
         _currentAuthSession!.accessToken.scopes.isNotEmpty &&
@@ -872,7 +970,7 @@ class CoopService extends ChangeNotifier {
       _refreshCsrfToken();
       lastLoginError = null;
       addSecurityLog('Login Karyawan Berhasil (${found.name}) • Sesi & Refresh Token Terbit');
-      notifyListeners();
+      _notifySessionOnly(pullRemote: true);
       return true;
     } catch (_) {
       _recordFailedLogin();
@@ -920,7 +1018,7 @@ class CoopService extends ChangeNotifier {
       _refreshCsrfToken();
       lastLoginError = null;
       addSecurityLog('Login Admin Berhasil (${found.name} - ${found.role.label}) • Sesi & Refresh Token Terbit');
-      notifyListeners();
+      _notifySessionOnly(pullRemote: true);
       return true;
     } catch (_) {
       _recordFailedLogin();
@@ -941,7 +1039,7 @@ class CoopService extends ChangeNotifier {
     _isLoggedIn = false;
     _isAdminMode = false;
     _currentAdmin = null;
-    notifyListeners();
+    _notifySessionOnly(pullRemote: false);
   }
 
   // Master Data Lists
@@ -987,7 +1085,11 @@ class CoopService extends ChangeNotifier {
     if (_currentMember == null) return const [];
     if (_cachedMemberTransactions != null) return _cachedMemberTransactions!;
     final list = _transactions
-        .where((t) => t.memberId == _currentMember!.id)
+        .where(
+          (t) =>
+              t.memberId == _currentMember!.id ||
+              t.memberName.toLowerCase() == _currentMember!.name.toLowerCase(),
+        )
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
     _cachedMemberTransactions = List.unmodifiable(list);
@@ -999,7 +1101,11 @@ class CoopService extends ChangeNotifier {
     if (_currentMember == null) return const [];
     if (_cachedMemberLoans != null) return _cachedMemberLoans!;
     final list = _loans
-        .where((l) => l.memberId == _currentMember!.id)
+        .where(
+          (l) =>
+              l.memberId == _currentMember!.id ||
+              l.memberName.toLowerCase() == _currentMember!.name.toLowerCase(),
+        )
         .toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     _cachedMemberLoans = List.unmodifiable(list);
@@ -1024,10 +1130,8 @@ class CoopService extends ChangeNotifier {
   // BUNGA PINJAMAN 1% / BULAN & BAGI HASIL ANGGOTA AKTIF (#6, #56, #60)
   // ==========================================
   /// Hanya menghitung anggota yang benar-benar AKTIF (bukan yang sudah resign / pending resign)
-  int get activeMemberCount {
-    final c = _members.where((m) => m.status == MemberStatus.active).length;
-    return c <= 0 ? 1 : c;
-  }
+  int get activeMemberCount =>
+      _members.where((m) => m.status == MemberStatus.active).length;
 
   int get totalMemberCount => activeMemberCount;
 
@@ -1035,8 +1139,11 @@ class CoopService extends ChangeNotifier {
       .where((l) => l.status == LoanStatus.active && l.remainingBalance > 0)
       .fold(0.0, (sum, l) => sum + l.monthlyInterest);
 
-  double get monthlyInterestSharePerMember =>
-      (totalMonthlyLoanInterestPool / activeMemberCount).roundToDouble();
+  double get monthlyInterestSharePerMember {
+    final count = activeMemberCount;
+    if (count <= 0) return 0.0;
+    return (totalMonthlyLoanInterestPool / count).roundToDouble();
+  }
 
   double get totalDistributedInterestAllTime =>
       _members.fold(0.0, (sum, m) => sum + m.saldoBagiHasilBunga);
@@ -1125,7 +1232,28 @@ class CoopService extends ChangeNotifier {
       ),
     ]);
 
-    // 1. Agus Rukanda: Karyawan Senior (14 bulan kerja, bebas pinjaman, saldo lengkap)
+    // Data anggota, pinjaman, tabungan, dan mutasi dimulai bersih (kosong)
+    // agar sistem siap untuk pendaftaran karyawan asli dari awal.
+    _members.clear();
+    _transactions.clear();
+    _loans.clear();
+    _resignations.clear();
+    _executedPayrollPeriods.clear();
+    _currentMember = null;
+    _currentAuthSession = null;
+
+    _securityLogs.addAll([
+      {
+        'title': 'Sistem Keamanan KOPKAR PT BBM Aktif',
+        'time': 'Hari ini • Enkripsi PIN 6-Digit & Anti-Brute Force',
+        'success': 'true',
+      },
+    ]);
+    _refreshCsrfToken();
+  }
+
+  /// Data simulasi untuk kebutuhan unit testing
+  void seedDemoMembersForTesting() {
     final agus = MemberModel(
       id: 'MBR-001',
       nik: '1983242342',
@@ -1139,15 +1267,13 @@ class CoopService extends ChangeNotifier {
       bankAccountHolder: 'Agus Rukanda',
       isBankVerified: true,
       securityPin: '123456',
-      isBiometricEnabled: true,
       simpananPokok: 100000.0,
-      simpananWajib: 350000.0, // 14 bulan x Rp 25.000
+      simpananWajib: 350000.0,
       simpananSukarela: 750000.0,
       saldoBagiHasilBunga: 100000.0,
       activeLoanBalance: 0.0,
     );
 
-    // 2. Sarah Wijaya: Karyawan sedang proses Klaim Resign (28 bulan kerja)
     final sarah = MemberModel(
       id: 'MBR-003',
       nik: '2024050991',
@@ -1161,10 +1287,9 @@ class CoopService extends ChangeNotifier {
       bankAccountHolder: 'Sarah Wijaya',
       isBankVerified: true,
       securityPin: '123456',
-      isBiometricEnabled: true,
       status: MemberStatus.pendingResign,
       simpananPokok: 100000.0,
-      simpananWajib: 700000.0, // 28 bulan x Rp 25.000
+      simpananWajib: 700000.0,
       simpananSukarela: 1200000.0,
       saldoBagiHasilBunga: 100000.0,
       activeLoanBalance: 0.0,
@@ -1174,9 +1299,7 @@ class CoopService extends ChangeNotifier {
     _currentMember = agus;
     _currentAuthSession = TokenService.createMemberSession(agus);
 
-    // Riwayat Transaksi Lengkap untuk Agus dan Sarah (#28)
     _transactions.addAll([
-      // Transaksi Agus
       TransactionModel(
         id: 'TRX-100',
         memberId: agus.id,
@@ -1219,8 +1342,6 @@ class CoopService extends ChangeNotifier {
         periodMonth: 8,
         periodYear: 2025,
       ),
-
-      // Transaksi Sarah
       TransactionModel(
         id: 'TRX-301',
         memberId: sarah.id,
@@ -1254,7 +1375,6 @@ class CoopService extends ChangeNotifier {
       ),
     ]);
 
-    // Seed Pending Resignation for Sarah (Sekarang menyertakan saldoBagiHasilRefund Rp 100.000!)
     _resignations.add(
       ResignationModel(
         id: 'RSG-001',
@@ -1275,15 +1395,6 @@ class CoopService extends ChangeNotifier {
         requestedAt: DateTime(2026, 10, 2),
       ),
     );
-
-    _securityLogs.addAll([
-      {
-        'title': 'Sistem Keamanan KOPKAR PT BBM Aktif',
-        'time': 'Hari ini • Enkripsi PIN 6-Digit & Anti-Brute Force',
-        'success': 'true',
-      },
-    ]);
-    _refreshCsrfToken();
   }
 
   // ==========================================
@@ -1785,7 +1896,12 @@ class CoopService extends ChangeNotifier {
     );
 
     // Update member's active loan balance
-    final memberIndex = _members.indexWhere((m) => m.id == loan.memberId);
+    var memberIndex = _members.indexWhere((m) => m.id == loan.memberId);
+    if (memberIndex == -1) {
+      memberIndex = _members.indexWhere(
+        (m) => m.name.toLowerCase() == loan.memberName.toLowerCase(),
+      );
+    }
     if (memberIndex != -1) {
       final m = _members[memberIndex];
       _members[memberIndex] = m.copyWith(
@@ -2034,7 +2150,12 @@ class CoopService extends ChangeNotifier {
       description: '${trx.description} (Diverifikasi $adminName)',
     );
 
-    final mIdx = _members.indexWhere((m) => m.id == trx.memberId);
+    var mIdx = _members.indexWhere((m) => m.id == trx.memberId);
+    if (mIdx == -1) {
+      mIdx = _members.indexWhere(
+        (m) => m.name.toLowerCase() == trx.memberName.toLowerCase(),
+      );
+    }
     if (mIdx != -1) {
       final m = _members[mIdx];
       _members[mIdx] = m.copyWith(
@@ -2121,7 +2242,12 @@ class CoopService extends ChangeNotifier {
       return false;
     }
 
-    final mIdx = _members.indexWhere((m) => m.id == trx.memberId);
+    var mIdx = _members.indexWhere((m) => m.id == trx.memberId);
+    if (mIdx == -1) {
+      mIdx = _members.indexWhere(
+        (m) => m.name.toLowerCase() == trx.memberName.toLowerCase(),
+      );
+    }
     if (mIdx == -1) return false;
     final m = _members[mIdx];
     if (m.simpananSukarela < trx.amount) return false;

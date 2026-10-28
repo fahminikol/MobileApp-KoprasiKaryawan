@@ -4,7 +4,9 @@ import '../services/coop_service.dart';
 import 'login_screen.dart';
 
 class OnboardingScreen extends StatelessWidget {
-  const OnboardingScreen({super.key});
+  final CoopService? coopService;
+
+  const OnboardingScreen({super.key, this.coopService});
 
   @override
   Widget build(BuildContext context) {
@@ -273,7 +275,9 @@ class OnboardingScreen extends StatelessWidget {
                           Navigator.pushReplacement(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => LoginScreen(coopService: CoopService()),
+                              builder: (_) => LoginScreen(
+                                coopService: coopService ?? CoopService(),
+                              ),
                             ),
                           );
                         },

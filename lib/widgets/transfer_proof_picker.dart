@@ -22,6 +22,7 @@ void showTransferProofDialog(
   showDialog(
     context: context,
     builder: (ctx) => AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       title: Row(
         children: [
@@ -35,43 +36,45 @@ void showTransferProofDialog(
           ),
         ],
       ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (subtitle != null && subtitle.isNotEmpty) ...[
-            Text(
-              subtitle,
-              style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
-            ),
-            const SizedBox(height: 10),
-          ],
-          if (bytes != null)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(14),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 420, maxWidth: 360),
-                child: InteractiveViewer(
-                  child: Image.memory(
-                    bytes,
-                    fit: BoxFit.contain,
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (subtitle != null && subtitle.isNotEmpty) ...[
+              Text(
+                subtitle,
+                style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+              ),
+              const SizedBox(height: 10),
+            ],
+            if (bytes != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 400, maxWidth: 340),
+                  child: InteractiveViewer(
+                    child: Image.memory(
+                      bytes,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
+              )
+            else
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: AppTheme.pastelPinkBg,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Text(
+                  'Gagal memuat pratinjau gambar bukti transfer.',
+                  style: TextStyle(fontSize: 12, color: AppTheme.dangerRed),
+                ),
               ),
-            )
-          else
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: AppTheme.pastelPinkBg,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: const Text(
-                'Gagal memuat pratinjau gambar bukti transfer.',
-                style: TextStyle(fontSize: 12, color: AppTheme.dangerRed),
-              ),
-            ),
-        ],
+          ],
+        ),
       ),
       actions: [
         TextButton(
@@ -196,17 +199,39 @@ class _TransferProofPickerState extends State<TransferProofPicker> {
             ),
             const SizedBox(height: 8),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                TextButton.icon(
-                  onPressed: () => showTransferProofDialog(context, _base64Image!),
-                  icon: const Icon(Icons.zoom_in_rounded, size: 16),
-                  label: const Text('Perbesar Foto', style: TextStyle(fontSize: 11.5)),
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () => showTransferProofDialog(context, _base64Image!),
+                    icon: const Icon(Icons.zoom_in_rounded, size: 15),
+                    label: const Text(
+                      'Perbesar Foto',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
                 ),
-                OutlinedButton.icon(
-                  onPressed: _isLoading ? null : _pickPhoto,
-                  icon: const Icon(Icons.refresh_rounded, size: 15),
-                  label: const Text('Ganti Foto', style: TextStyle(fontSize: 11.5)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _isLoading ? null : _pickPhoto,
+                    icon: const Icon(Icons.refresh_rounded, size: 14),
+                    label: const Text(
+                      'Ganti Foto',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 11),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -218,24 +243,35 @@ class _TransferProofPickerState extends State<TransferProofPicker> {
             const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
-              child: ElevatedButton.icon(
+              child: ElevatedButton(
                 onPressed: _isLoading ? null : _pickPhoto,
-                icon: _isLoading
-                    ? const SizedBox(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (_isLoading)
+                      const SizedBox(
                         width: 15,
                         height: 15,
                         child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                       )
-                    : const Icon(Icons.upload_file_rounded, size: 18),
-                label: Text(
-                  _isLoading ? 'Memuat Foto...' : 'Pilih Foto Bukti Transfer (Galeri / Kamera)',
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                ),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryBlue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    else
+                      const Icon(Icons.upload_file_rounded, size: 18),
+                    const SizedBox(width: 6),
+                    Flexible(
+                      child: Text(
+                        _isLoading ? 'Memuat Foto...' : 'Pilih Foto Bukti Transfer',
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

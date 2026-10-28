@@ -163,4 +163,34 @@ class PlatformStorageHelper {
     } catch (_) {}
     return true;
   }
+
+  static Future<String?> savePdfToDownloads({
+    required String fileName,
+    required List<int> pdfBytes,
+  }) async {
+    try {
+      if (Platform.isAndroid) {
+        final res = await _nativeChannel.invokeMethod<String>(
+          'savePdfToDownloads',
+          {
+            'fileName': fileName,
+            'bytes': Uint8List.fromList(pdfBytes),
+          },
+        );
+        if (res != null && res.isNotEmpty) return res;
+      }
+    } catch (_) {}
+
+    // Fallback untuk Desktop (macOS/Windows/Linux) atau iOS
+    try {
+      final homeDir = Platform.environment['HOME'] ?? Directory.systemTemp.path;
+      final downloadsDir = Directory('$homeDir/Downloads');
+      final targetDir = downloadsDir.existsSync() ? downloadsDir : Directory.systemTemp;
+      final file = File('${targetDir.path}/$fileName');
+      await file.writeAsBytes(pdfBytes, flush: true);
+      return file.path;
+    } catch (_) {
+      return null;
+    }
+  }
 }

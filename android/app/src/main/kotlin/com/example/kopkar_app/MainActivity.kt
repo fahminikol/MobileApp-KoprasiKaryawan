@@ -1,11 +1,15 @@
 package com.example.kopkar_app
 
 import android.app.Activity
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
 import android.util.Base64
 import android.provider.Settings
 import android.view.WindowManager
@@ -15,6 +19,8 @@ import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 import java.io.ByteArrayOutputStream
+import java.io.File
+import java.io.FileOutputStream
 import java.net.NetworkInterface
 import java.security.MessageDigest
 import java.util.Collections
@@ -110,9 +116,74 @@ class MainActivity : FlutterActivity() {
                             result.success(null)
                         }
                     }
+                    "savePdfToDownloads" -> {
+                        val fileName = call.argument<String>("fileName") ?: "E-Statement_KOPKAR.pdf"
+                        val bytes = call.argument<ByteArray>("bytes")
+                        if (bytes == null || bytes.isEmpty()) {
+                            result.success(null)
+                            return@setMethodCallHandler
+                        }
+                        try {
+                            val savedPath = savePdfBytesToDownloads(fileName, bytes)
+                            result.success(savedPath)
+                        } catch (e: Exception) {
+                            result.success(null)
+                        }
+                    }
                     else -> result.notImplemented()
                 }
             }
+    }
+
+    private fun savePdfBytesToDownloads(fileName: String, bytes: ByteArray): String? {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val values = ContentValues().apply {
+                    put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+                    put(MediaStore.Downloads.MIME_TYPE, "application/pdf")
+                    put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+                    put(MediaStore.Downloads.IS_PENDING, 1)
+                }
+                val resolver = applicationContext.contentResolver
+                val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                if (uri != null) {
+                    resolver.openOutputStream(uri)?.use { out ->
+                        out.write(bytes)
+                        out.flush()
+                    }
+                    values.clear()
+                    values.put(MediaStore.Downloads.IS_PENDING, 0)
+                    resolver.update(uri, values, null, null)
+
+                    // Coba buka langsung di aplikasi PDF Viewer jika ada
+                    try {
+                        val viewIntent = Intent(Intent.ACTION_VIEW).apply {
+                            setDataAndType(uri, "application/pdf")
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        startActivity(Intent.createChooser(viewIntent, "Buka Dokumen PDF").apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        })
+                    } catch (_: Exception) {}
+
+                    return "Download/$fileName"
+                }
+            }
+            val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+            if (!dir.exists()) dir.mkdirs()
+            val file = File(dir, fileName)
+            FileOutputStream(file).use { it.write(bytes) }
+            "Download/$fileName"
+        } catch (e: Exception) {
+            try {
+                val fallbackDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS) ?: filesDir
+                val file = File(fallbackDir, fileName)
+                FileOutputStream(file).use { it.write(bytes) }
+                file.absolutePath
+            } catch (_: Exception) {
+                null
+            }
+        }
     }
 
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
@@ -133,7 +204,7 @@ class MainActivity : FlutterActivity() {
                             runOnUiThread { res.success(null) }
                             return@Thread
                         }
-                        val maxDim = 600.0
+                        val maxDim = 480.0
                         val w = original.width
                         val h = original.height
                         val largest = max(w, h)
@@ -146,7 +217,7 @@ class MainActivity : FlutterActivity() {
                             original
                         }
                         val baos = ByteArrayOutputStream()
-                        scaled.compress(Bitmap.CompressFormat.JPEG, 72, baos)
+                        scaled.compress(Bitmap.CompressFormat.JPEG, 62, baos)
                         val b64 = Base64.encodeToString(baos.toByteArray(), Base64.NO_WRAP)
                         runOnUiThread { res.success(b64) }
                     } catch (e: Exception) {

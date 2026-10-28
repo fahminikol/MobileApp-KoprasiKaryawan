@@ -219,12 +219,14 @@ class _ResignationScreenState extends State<ResignationScreen> {
                           children: [
                             Icon(Icons.warning_amber_rounded, color: AppTheme.dangerRed, size: 20),
                             SizedBox(width: 8),
-                            Text(
-                              'Sisa Pinjaman Melebihi Total Tabungan!',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                                color: AppTheme.dangerRed,
+                            Expanded(
+                              child: Text(
+                                'Sisa Pinjaman Melebihi Total Tabungan!',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: AppTheme.dangerRed,
+                                ),
                               ),
                             ),
                           ],
@@ -433,14 +435,18 @@ class _ResignationScreenState extends State<ResignationScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Status Pengajuan Resign',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.textDark,
+              const Expanded(
+                child: Text(
+                  'Status Pengajuan Resign',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textDark,
+                  ),
                 ),
               ),
+              const SizedBox(width: 8),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(

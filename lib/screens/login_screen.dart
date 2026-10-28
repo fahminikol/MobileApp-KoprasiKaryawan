@@ -218,7 +218,7 @@ class _LoginScreenState extends State<LoginScreen> {
           controller: _nikController,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(
-            hintText: 'Contoh: 1983242342',
+            hintText: 'Masukkan NIK karyawan',
             prefixIcon: const Icon(Icons.badge_outlined, size: 20, color: AppTheme.primaryBlue),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -342,7 +342,7 @@ class _LoginScreenState extends State<LoginScreen> {
           controller: _adminEmailController,
           keyboardType: TextInputType.emailAddress,
           decoration: InputDecoration(
-            hintText: 'Contoh: admin@kopkar.com',
+            hintText: 'Masukkan email pengurus',
             prefixIcon: const Icon(Icons.alternate_email_rounded, size: 20, color: AppTheme.primaryBlue),
             border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
             contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),

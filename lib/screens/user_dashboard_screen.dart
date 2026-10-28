@@ -334,12 +334,15 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                               children: [
                                 const Icon(Icons.info_outline_rounded, size: 13, color: Colors.amberAccent),
                                 const SizedBox(width: 5),
-                                Text(
-                                  'Sisa Pinjaman: ${_isBalanceHidden ? "Rp •••••" : CoopService.formatRupiah(member.activeLoanBalance)}',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.amberAccent,
+                                Flexible(
+                                  child: Text(
+                                    'Sisa Pinjaman: ${_isBalanceHidden ? "Rp •••••" : CoopService.formatRupiah(member.activeLoanBalance)}',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.amberAccent,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -359,29 +362,34 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  member.name.toUpperCase(),
-                                  style: const TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w800,
-                                    color: Colors.white,
-                                    letterSpacing: 0.5,
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    member.name.toUpperCase(),
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.white,
+                                      letterSpacing: 0.5,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '${member.statusLabel} • ${member.membershipMonths} Bulan',
-                                  style: TextStyle(
-                                    fontSize: 10.5,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.white.withValues(alpha: 0.75),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '${member.statusLabel} • ${member.membershipMonths} Bulan',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 10.5,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.white.withValues(alpha: 0.75),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                               decoration: BoxDecoration(
@@ -588,14 +596,18 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Notifikasi & Mutasi Terakhir',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.textDark,
+                      const Expanded(
+                        child: Text(
+                          'Notifikasi & Mutasi Terakhir',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.textDark,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       TextButton(
                         onPressed: () {
                           Navigator.push(
@@ -623,67 +635,109 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                   ),
                   const SizedBox(height: 14),
 
-                  // 6. Dynamic Notification Card (#14, #41)
+                  // 6. Dynamic Notification & Recent Mutations Cards (#14, #41)
                   if (!_hideNotificationBanner && latestTx != null)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: AppTheme.softShadow,
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            width: 4,
-                            height: 52,
-                            decoration: BoxDecoration(
-                              color: latestTx.isCredit ? AppTheme.successGreen : AppTheme.primaryBlue,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  '${latestTx.typeLabel} (${CoopService.formatDate(latestTx.date)})',
-                                  style: const TextStyle(
-                                    fontSize: 13.5,
-                                    fontWeight: FontWeight.w700,
-                                    color: AppTheme.textDark,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  '${latestTx.description} • Nominal: ${CoopService.formatRupiah(latestTx.amount)}',
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: AppTheme.textMuted,
-                                    height: 1.4,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          GestureDetector(
-                            onTap: () => setState(() => _hideNotificationBanner = true),
-                            child: const Padding(
-                              padding: EdgeInsets.all(4),
-                              child: Icon(
-                                Icons.close_rounded,
-                                size: 18,
-                                color: AppTheme.textLight,
+                    ...widget.coopService.currentMemberTransactions.take(3).map((tx) {
+                      final hasProof = tx.proofImageBase64 != null && tx.proofImageBase64!.isNotEmpty;
+                      return Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: AppTheme.softShadow,
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 4,
+                              height: hasProof ? 72 : 52,
+                              decoration: BoxDecoration(
+                                color: tx.isCredit ? AppTheme.successGreen : AppTheme.primaryBlue,
+                                borderRadius: BorderRadius.circular(4),
                               ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${tx.typeLabel} (${CoopService.formatDate(tx.date)})',
+                                    style: const TextStyle(
+                                      fontSize: 13.5,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppTheme.textDark,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${tx.description} • Nominal: ${CoopService.formatRupiah(tx.amount)}',
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: AppTheme.textMuted,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                  if (hasProof) ...[
+                                    const SizedBox(height: 8),
+                                    InkWell(
+                                      onTap: () => showTransferProofDialog(
+                                        context,
+                                        tx.proofImageBase64!,
+                                        title: 'Bukti Transfer: ${tx.typeLabel}',
+                                        subtitle: '${CoopService.formatRupiah(tx.amount)} • ${tx.description}',
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                        decoration: BoxDecoration(
+                                          color: AppTheme.primaryBlueLight,
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.3)),
+                                        ),
+                                        child: const Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Icon(Icons.image_search_rounded, size: 15, color: AppTheme.primaryBlue),
+                                            SizedBox(width: 6),
+                                            Flexible(
+                                              child: Text(
+                                                'Lihat Foto Bukti Transfer',
+                                                overflow: TextOverflow.ellipsis,
+                                                style: TextStyle(
+                                                  fontSize: 11.5,
+                                                  fontWeight: FontWeight.bold,
+                                                  color: AppTheme.primaryBlue,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                            if (tx.id == latestTx.id)
+                              GestureDetector(
+                                onTap: () => setState(() => _hideNotificationBanner = true),
+                                child: const Padding(
+                                  padding: EdgeInsets.all(4),
+                                  child: Icon(
+                                    Icons.close_rounded,
+                                    size: 18,
+                                    color: AppTheme.textLight,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    }),
 
                   // Notice Card on Resignation Rule Guarantee
                   Container(
@@ -773,80 +827,86 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
     required VoidCallback onTap,
     String? badgeText,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        children: [
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Container(
-                width: 62,
-                height: 62,
-                decoration: BoxDecoration(
-                  color: bgColor,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: iconColor.withValues(alpha: 0.12),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    color: bgColor,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: iconColor.withValues(alpha: 0.12),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                    border: Border.all(
+                      color: iconColor.withValues(alpha: 0.15),
+                      width: 1,
                     ),
-                  ],
-                  border: Border.all(
-                    color: iconColor.withValues(alpha: 0.15),
-                    width: 1,
                   ),
-                ),
-                child: Center(
-                  child: Icon(
-                    icon,
-                    size: 27,
-                    color: iconColor,
-                  ),
-                ),
-              ),
-              if (badgeText != null)
-                Positioned(
-                  top: -5,
-                  right: -6,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                    decoration: BoxDecoration(
+                  child: Center(
+                    child: Icon(
+                      icon,
+                      size: 26,
                       color: iconColor,
-                      borderRadius: BorderRadius.circular(8),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.15),
-                          blurRadius: 4,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
                     ),
-                    child: Text(
-                      badgeText,
-                      style: const TextStyle(
-                        fontSize: 8.5,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.white,
+                  ),
+                ),
+                if (badgeText != null)
+                  Positioned(
+                    top: -5,
+                    right: -6,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: iconColor,
+                        borderRadius: BorderRadius.circular(8),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        badgeText,
+                        style: const TextStyle(
+                          fontSize: 8.5,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
                       ),
                     ),
                   ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.textDark,
-              letterSpacing: -0.2,
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.textDark,
+                letterSpacing: -0.2,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -869,9 +929,11 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
               children: [
                 Icon(Icons.pie_chart_rounded, color: AppTheme.successGreen),
                 SizedBox(width: 8),
-                Text(
-                  'Transparansi Bagi Hasil Bunga 1%',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                Expanded(
+                  child: Text(
+                    'Transparansi Bagi Hasil Bunga 1%',
+                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                  ),
                 ),
               ],
             ),
@@ -924,7 +986,10 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: AppTheme.textDark)),
+        Expanded(
+          child: Text(label, style: const TextStyle(fontSize: 12, color: AppTheme.textDark)),
+        ),
+        const SizedBox(width: 8),
         Text(val, style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w800, color: AppTheme.primaryBlueDark)),
       ],
     );
@@ -1022,9 +1087,29 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
     );
   }
 
+  void _formatCurrencyField(TextEditingController ctrl, String value) {
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) {
+      if (ctrl.text.isNotEmpty) {
+        ctrl.value = const TextEditingValue(text: '');
+      }
+      return;
+    }
+    final formatted = digits.replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]}.',
+    );
+    if (ctrl.text != formatted) {
+      ctrl.value = TextEditingValue(
+        text: formatted,
+        selection: TextSelection.collapsed(offset: formatted.length),
+      );
+    }
+  }
+
   // Menu Sukarela: Bisa Setor (Menunggu Verifikasi Admin) atau Tarik (Otorisasi PIN 6-Digit) (#5, #11)
   void _showSukarelaActionSheet(BuildContext context, MemberModel member) {
-    final amountController = TextEditingController(text: '100000');
+    final amountController = TextEditingController();
     final noteController = TextEditingController();
     bool isDepositMode = true;
     String? proofBase64;
@@ -1050,10 +1135,14 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Simpanan Sukarela',
-                    style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                  const Expanded(
+                    child: Text(
+                      'Simpanan Sukarela',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: AppTheme.textDark),
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Text(
                     'Saldo: ${CoopService.formatRupiah(member.simpananSukarela)}',
                     style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue),
@@ -1126,20 +1215,6 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                     : 'Bisa Ditarik: ${CoopService.formatRupiah(member.maxWithdrawableSukarela)} (Dari Saldo Sukarela ${CoopService.formatRupiah(member.simpananSukarela)}).\nDana akan ditransfer Bendahara ke ${member.bankName} (${member.maskedBankAccount}).',
                 style: const TextStyle(fontSize: 11.5, color: AppTheme.textMuted, height: 1.35),
               ),
-              if (!isDepositMode && member.lockedSukarelaCollateral > 0) ...[
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppTheme.pastelYellowBg,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text(
-                    '🔒 Sebesar ${CoopService.formatRupiah(member.lockedSukarelaCollateral)} dikunci sementara sebagai jaminan Sisa Pinjaman Aktif (${CoopService.formatRupiah(member.activeLoanBalance)}).',
-                    style: const TextStyle(fontSize: 11, color: AppTheme.textDark, height: 1.35),
-                  ),
-                ),
-              ],
               if (isDepositMode) ...[
                 const SizedBox(height: 8),
                 Container(
@@ -1161,9 +1236,11 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                       TextButton.icon(
                         onPressed: () {
                           Clipboard.setData(ClipboardData(text: widget.coopService.coopBankAccountNumber));
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('📋 No. Rekening Koperasi (${widget.coopService.coopBankAccountNumber}) disalin!')),
-                          );
+                          ScaffoldMessenger.of(context)
+                            ..clearSnackBars()
+                            ..showSnackBar(
+                              SnackBar(content: Text('📋 No. Rekening Koperasi (${widget.coopService.coopBankAccountNumber}) disalin!')),
+                            );
                         },
                         icon: const Icon(Icons.copy_rounded, size: 14),
                         label: const Text('Salin', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
@@ -1177,8 +1254,12 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
               TextField(
                 controller: amountController,
                 keyboardType: TextInputType.number,
+                onChanged: (v) => _formatCurrencyField(amountController, v),
                 decoration: InputDecoration(
-                  labelText: 'Nominal Rupiah',
+                  labelText: isDepositMode
+                      ? 'Nominal Setoran Rupiah'
+                      : 'Nominal Penarikan (Maks ${CoopService.formatRupiah(member.maxWithdrawableSukarela)})',
+                  hintText: isDepositMode ? 'Contoh: 1.000.000' : 'Contoh: 8.000.000',
                   prefixText: 'Rp ',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
                 ),
@@ -1210,30 +1291,36 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                         0;
                     if (isDepositMode) {
                       if (proofBase64 == null || proofBase64!.isEmpty) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('⚠️ Wajib unggah/masukkan foto bukti transfer terlebih dahulu!'),
-                            backgroundColor: AppTheme.dangerRed,
-                          ),
-                        );
+                        ScaffoldMessenger.of(context)
+                          ..clearSnackBars()
+                          ..showSnackBar(
+                            const SnackBar(
+                              content: Text('⚠️ Wajib unggah/masukkan foto bukti transfer terlebih dahulu!'),
+                              backgroundColor: AppTheme.dangerRed,
+                            ),
+                          );
                         return;
                       }
                       if (widget.coopService.hasPendingDeposit(member.id)) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('⚠️ Anda masih memiliki pengajuan Setor Sukarela yang menunggu verifikasi Admin/Bendahara!'),
-                            backgroundColor: AppTheme.warningOrange,
-                          ),
-                        );
+                        ScaffoldMessenger.of(context)
+                          ..clearSnackBars()
+                          ..showSnackBar(
+                            const SnackBar(
+                              content: Text('⚠️ Anda masih memiliki pengajuan Setor Sukarela yang menunggu verifikasi Admin/Bendahara!'),
+                              backgroundColor: AppTheme.warningOrange,
+                            ),
+                          );
                         return;
                       }
                       if (amt < 10000 || amt > 50000000) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('❌ Nominal setoran wajib Rp 10.000 s/d Rp 50.000.000!'),
-                            backgroundColor: AppTheme.dangerRed,
-                          ),
-                        );
+                        ScaffoldMessenger.of(context)
+                          ..clearSnackBars()
+                          ..showSnackBar(
+                            const SnackBar(
+                              content: Text('❌ Nominal setoran wajib Rp 10.000 s/d Rp 50.000.000!'),
+                              backgroundColor: AppTheme.dangerRed,
+                            ),
+                          );
                         return;
                       }
                       final ok = widget.coopService.depositSukarela(
@@ -1242,39 +1329,57 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                         proofImageBase64: proofBase64,
                       );
                       Navigator.pop(ctx);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            ok
-                                ? '✅ Pengajuan setor ${CoopService.formatRupiah(amt)} beserta foto bukti TF berhasil dikirim!'
-                                : '⚠️ Pengajuan gagal atau terlalu cepat.',
-                          ),
-                          backgroundColor: ok ? AppTheme.successGreen : AppTheme.warningOrange,
-                        ),
-                      );
-                    } else {
-                      if (widget.coopService.hasPendingWithdrawal(member.id)) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('⚠️ Anda masih memiliki permohonan penarikan sukarela yang menunggu ditransfer Bendahara!'),
-                            backgroundColor: AppTheme.warningOrange,
-                          ),
-                        );
-                        return;
-                      }
-                      if (amt <= 0 || amt > member.maxWithdrawableSukarela) {
-                        ScaffoldMessenger.of(context).showSnackBar(
+                      ScaffoldMessenger.of(context)
+                        ..clearSnackBars()
+                        ..showSnackBar(
                           SnackBar(
                             content: Text(
-                              member.lockedSukarelaCollateral > 0
-                                  ? '❌ Melebihi batas yang bisa ditarik (${CoopService.formatRupiah(member.maxWithdrawableSukarela)}) karena sebagian dikunci sebagai jaminan pinjaman aktif!'
-                                  : '❌ Nominal melebihi Saldo Simpanan Sukarela Anda!',
+                              ok
+                                  ? '✅ Pengajuan setor ${CoopService.formatRupiah(amt)} beserta foto bukti TF berhasil dikirim!'
+                                  : '⚠️ Pengajuan gagal atau terlalu cepat.',
                             ),
-                            backgroundColor: AppTheme.dangerRed,
+                            backgroundColor: ok ? AppTheme.successGreen : AppTheme.warningOrange,
                           ),
                         );
+                    } else {
+                      if (widget.coopService.hasPendingWithdrawal(member.id)) {
+                        ScaffoldMessenger.of(context)
+                          ..clearSnackBars()
+                          ..showSnackBar(
+                            const SnackBar(
+                              content: Text('⚠️ Anda masih memiliki permohonan penarikan sukarela yang menunggu ditransfer Bendahara!'),
+                              backgroundColor: AppTheme.warningOrange,
+                            ),
+                          );
                         return;
                       }
+                      if (amt < 10000) {
+                        ScaffoldMessenger.of(context)
+                          ..clearSnackBars()
+                          ..showSnackBar(
+                            const SnackBar(
+                              content: Text('❌ Minimal penarikan adalah Rp 10.000!'),
+                              backgroundColor: AppTheme.dangerRed,
+                            ),
+                          );
+                        return;
+                      }
+                      if (amt > member.maxWithdrawableSukarela) {
+                        ScaffoldMessenger.of(context)
+                          ..clearSnackBars()
+                          ..showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                member.lockedSukarelaCollateral > 0
+                                    ? '❌ Nominal ${CoopService.formatRupiah(amt)} melebihi batas yang bisa ditarik (${CoopService.formatRupiah(member.maxWithdrawableSukarela)})!'
+                                    : '❌ Nominal ${CoopService.formatRupiah(amt)} melebihi Saldo Simpanan Sukarela Anda!',
+                              ),
+                              backgroundColor: AppTheme.dangerRed,
+                            ),
+                          );
+                        return;
+                      }
+                      ScaffoldMessenger.of(context).clearSnackBars();
                       Navigator.pop(ctx);
                       SecurityPinDialog.show(
                         context,
@@ -1285,14 +1390,16 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                         onVerified: () {
                           final ok = widget.coopService.withdrawSukarela(amt, noteController.text);
                           if (ok) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  '✅ Permohonan tarik ${CoopService.formatRupiah(amt)} terkirim! Menunggu Bendahara mentransfer ke rekening ${member.bankName} Anda.',
+                            ScaffoldMessenger.of(context)
+                              ..clearSnackBars()
+                              ..showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '✅ Permohonan tarik ${CoopService.formatRupiah(amt)} terkirim! Menunggu Bendahara mentransfer ke rekening ${member.bankName} Anda.',
+                                  ),
+                                  backgroundColor: AppTheme.successGreen,
                                 ),
-                                backgroundColor: AppTheme.successGreen,
-                              ),
-                            );
+                              );
                           }
                         },
                       );

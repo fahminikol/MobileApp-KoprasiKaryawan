@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/coop_service.dart';
 import '../services/input_sanitizer.dart';
+import '../services/pdf_generator.dart';
+import '../services/platform_io_helper.dart';
 import '../theme/app_theme.dart';
 import '../widgets/stat_box.dart';
 import '../widgets/security_pin_dialog.dart';
@@ -148,19 +150,24 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(
-                            children: [
-                              const Icon(Icons.filter_list_rounded, color: Colors.white, size: 18),
-                              const SizedBox(width: 8),
-                              Text(
-                                _filterLabel,
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
+                          Expanded(
+                            child: Row(
+                              children: [
+                                const Icon(Icons.filter_list_rounded, color: Colors.white, size: 18),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _filterLabel,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                           const Icon(
                             Icons.keyboard_arrow_down_rounded,
@@ -242,20 +249,25 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Total Akumulasi Hak Simpanan',
-                                  style: TextStyle(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.w600),
-                                ),
-                                SizedBox(height: 2),
-                                Text(
-                                  'Pokok + Wajib + Sukarela + Bagi Hasil 1%',
-                                  style: TextStyle(fontSize: 10.5, color: AppTheme.textLight),
-                                ),
-                              ],
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Total Akumulasi Hak Simpanan',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(fontSize: 12, color: AppTheme.textMuted, fontWeight: FontWeight.w600),
+                                  ),
+                                  SizedBox(height: 2),
+                                  Text(
+                                    'Pokok + Wajib + Sukarela + Bagi Hasil 1%',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(fontSize: 10.5, color: AppTheme.textLight),
+                                  ),
+                                ],
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             Text(
                               CoopService.formatRupiah(member.totalSavings),
                               style: const TextStyle(
@@ -306,14 +318,18 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Riwayat Mutasi Simpanan',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.textDark,
+                      const Expanded(
+                        child: Text(
+                          'Riwayat Mutasi Simpanan',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.textDark,
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
                       Text(
                         '${transactions.length} Transaksi',
                         style: const TextStyle(
@@ -439,8 +455,28 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
     );
   }
 
+  void _formatCurrencyField(TextEditingController ctrl, String value) {
+    final digits = value.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) {
+      if (ctrl.text.isNotEmpty) {
+        ctrl.value = const TextEditingValue(text: '');
+      }
+      return;
+    }
+    final formatted = digits.replaceAllMapped(
+      RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+      (m) => '${m[1]}.',
+    );
+    if (ctrl.text != formatted) {
+      ctrl.value = TextEditingValue(
+        text: formatted,
+        selection: TextSelection.collapsed(offset: formatted.length),
+      );
+    }
+  }
+
   void _showDepositModal(BuildContext context, MemberModel member) {
-    final amountCtrl = TextEditingController(text: '100000');
+    final amountCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
     String? proofBase64;
 
@@ -492,9 +528,11 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
                   TextButton.icon(
                     onPressed: () {
                       Clipboard.setData(ClipboardData(text: widget.coopService.coopBankAccountNumber));
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('📋 No. Rekening Koperasi (${widget.coopService.coopBankAccountNumber}) disalin!')),
-                      );
+                      ScaffoldMessenger.of(context)
+                        ..clearSnackBars()
+                        ..showSnackBar(
+                          SnackBar(content: Text('📋 No. Rekening Koperasi (${widget.coopService.coopBankAccountNumber}) disalin!')),
+                        );
                     },
                     icon: const Icon(Icons.copy_rounded, size: 14),
                     label: const Text('Salin', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
@@ -506,8 +544,10 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
             TextField(
               controller: amountCtrl,
               keyboardType: TextInputType.number,
+              onChanged: (v) => _formatCurrencyField(amountCtrl, v),
               decoration: InputDecoration(
                 labelText: 'Nominal Setoran (Min Rp 10.000 - Maks Rp 50 Juta)',
+                hintText: 'Contoh: 1.000.000',
                 prefixText: 'Rp ',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -531,32 +571,38 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
               child: ElevatedButton(
                 onPressed: () {
                   if (proofBase64 == null || proofBase64!.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('⚠️ Wajib unggah/masukkan foto bukti transfer terlebih dahulu!'),
-                        backgroundColor: AppTheme.dangerRed,
-                      ),
-                    );
+                    ScaffoldMessenger.of(context)
+                      ..clearSnackBars()
+                      ..showSnackBar(
+                        const SnackBar(
+                          content: Text('⚠️ Wajib unggah/masukkan foto bukti transfer terlebih dahulu!'),
+                          backgroundColor: AppTheme.dangerRed,
+                        ),
+                      );
                     return;
                   }
                   if (widget.coopService.hasPendingDeposit(member.id)) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('⚠️ Anda masih memiliki pengajuan Setor Sukarela yang menunggu verifikasi Admin/Bendahara!'),
-                        backgroundColor: AppTheme.warningOrange,
-                      ),
-                    );
+                    ScaffoldMessenger.of(context)
+                      ..clearSnackBars()
+                      ..showSnackBar(
+                        const SnackBar(
+                          content: Text('⚠️ Anda masih memiliki pengajuan Setor Sukarela yang menunggu verifikasi Admin/Bendahara!'),
+                          backgroundColor: AppTheme.warningOrange,
+                        ),
+                      );
                     return;
                   }
                   final amt = double.tryParse(amountCtrl.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
                   final amtVal = InputSanitizer.validateRupiahAmount(amt, min: 10000, max: 50000000, label: 'Setoran');
                   if (!amtVal.isValid) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('❌ ${amtVal.errorMessage}'),
-                        backgroundColor: AppTheme.dangerRed,
-                      ),
-                    );
+                    ScaffoldMessenger.of(context)
+                      ..clearSnackBars()
+                      ..showSnackBar(
+                        SnackBar(
+                          content: Text('❌ ${amtVal.errorMessage}'),
+                          backgroundColor: AppTheme.dangerRed,
+                        ),
+                      );
                     return;
                   }
                   final cleanNote = InputSanitizer.sanitizeText(noteCtrl.text, maxLength: 100);
@@ -566,16 +612,18 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
                     proofImageBase64: proofBase64,
                   );
                   Navigator.pop(ctx);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        ok
-                            ? '✅ Pengajuan setor ${CoopService.formatRupiah(amt)} beserta foto bukti TF berhasil dikirim!'
-                            : '⚠️ Pengajuan gagal atau terlalu cepat.',
+                  ScaffoldMessenger.of(context)
+                    ..clearSnackBars()
+                    ..showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          ok
+                              ? '✅ Pengajuan setor ${CoopService.formatRupiah(amt)} beserta foto bukti TF berhasil dikirim!'
+                              : '⚠️ Pengajuan gagal atau terlalu cepat.',
+                        ),
+                        backgroundColor: ok ? AppTheme.successGreen : AppTheme.warningOrange,
                       ),
-                      backgroundColor: ok ? AppTheme.successGreen : AppTheme.warningOrange,
-                    ),
-                  );
+                    );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryBlue,
@@ -594,9 +642,7 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
   void _showWithdrawModal(BuildContext context, MemberModel member) {
     final maxWithdraw = member.maxWithdrawableSukarela;
     final lockedCollateral = member.lockedSukarelaCollateral;
-    final amountCtrl = TextEditingController(
-      text: maxWithdraw >= 100000 ? '100000' : maxWithdraw.toInt().toString(),
-    );
+    final amountCtrl = TextEditingController();
     final noteCtrl = TextEditingController();
 
     showModalBottomSheet(
@@ -618,26 +664,14 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
               'Rekening Tujuan Transfer: ${member.bankName} (${member.maskedBankAccount})',
               style: const TextStyle(fontSize: 11.5, color: AppTheme.primaryBlue, fontWeight: FontWeight.w600, height: 1.35),
             ),
-            if (lockedCollateral > 0) ...[
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppTheme.pastelYellowBg,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  '🔒 Proteksi Jaminan Pinjaman: Sebesar ${CoopService.formatRupiah(lockedCollateral)} dari Simpanan Sukarela Anda dikunci sementara karena Anda memiliki Sisa Pinjaman Aktif (${CoopService.formatRupiah(member.activeLoanBalance)}).',
-                  style: const TextStyle(fontSize: 11, color: AppTheme.textDark, height: 1.35),
-                ),
-              ),
-            ],
             const SizedBox(height: 14),
             TextField(
               controller: amountCtrl,
               keyboardType: TextInputType.number,
+              onChanged: (v) => _formatCurrencyField(amountCtrl, v),
               decoration: InputDecoration(
                 labelText: 'Nominal Penarikan (Maks ${CoopService.formatRupiah(maxWithdraw)})',
+                hintText: 'Contoh: 8.000.000',
                 prefixText: 'Rp ',
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
               ),
@@ -657,29 +691,34 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
               child: ElevatedButton.icon(
                 onPressed: () {
                   if (widget.coopService.hasPendingWithdrawal(member.id)) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('⚠️ Anda masih memiliki permohonan penarikan sukarela yang menunggu ditransfer Bendahara!'),
-                        backgroundColor: AppTheme.warningOrange,
-                      ),
-                    );
+                    ScaffoldMessenger.of(context)
+                      ..clearSnackBars()
+                      ..showSnackBar(
+                        const SnackBar(
+                          content: Text('⚠️ Anda masih memiliki permohonan penarikan sukarela yang menunggu ditransfer Bendahara!'),
+                          backgroundColor: AppTheme.warningOrange,
+                        ),
+                      );
                     return;
                   }
                   final amt = double.tryParse(amountCtrl.text.replaceAll(RegExp(r'[^0-9]'), '')) ?? 0;
                   final amtVal = InputSanitizer.validateRupiahAmount(amt, min: 10000, max: maxWithdraw, label: 'Penarikan');
                   if (!amtVal.isValid) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          lockedCollateral > 0 && amt > maxWithdraw
-                              ? '❌ Melebihi batas yang bisa ditarik (${CoopService.formatRupiah(maxWithdraw)}) karena sebagian dikunci sebagai jaminan pinjaman aktif!'
-                              : '❌ ${amtVal.errorMessage}',
+                    ScaffoldMessenger.of(context)
+                      ..clearSnackBars()
+                      ..showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            lockedCollateral > 0 && amt > maxWithdraw
+                                ? '❌ Nominal ${CoopService.formatRupiah(amt)} melebihi batas yang bisa ditarik (${CoopService.formatRupiah(maxWithdraw)})!'
+                                : '❌ ${amtVal.errorMessage}',
+                          ),
+                          backgroundColor: AppTheme.dangerRed,
                         ),
-                        backgroundColor: AppTheme.dangerRed,
-                      ),
-                    );
+                      );
                     return;
                   }
+                  ScaffoldMessenger.of(context).clearSnackBars();
                   final cleanNote = InputSanitizer.sanitizeText(noteCtrl.text, maxLength: 100);
                   Navigator.pop(ctx);
                   SecurityPinDialog.show(
@@ -691,14 +730,16 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
                     onVerified: () {
                       final ok = widget.coopService.withdrawSukarela(amt, cleanNote);
                       if (ok) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              '✅ Permohonan tarik ${CoopService.formatRupiah(amt)} terkirim! Menunggu Bendahara mentransfer ke rekening ${member.bankName} Anda.',
+                        ScaffoldMessenger.of(context)
+                          ..clearSnackBars()
+                          ..showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '✅ Permohonan tarik ${CoopService.formatRupiah(amt)} terkirim! Menunggu Bendahara mentransfer ke rekening ${member.bankName} Anda.',
+                              ),
+                              backgroundColor: AppTheme.successGreen,
                             ),
-                            backgroundColor: AppTheme.successGreen,
-                          ),
-                        );
+                          );
                       }
                     },
                   );
@@ -775,7 +816,7 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (tx.proofImageBase64 != null && tx.proofImageBase64!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 6),
                   InkWell(
                     onTap: () => showTransferProofDialog(
                       context,
@@ -783,21 +824,32 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
                       title: 'Bukti Transfer: ${tx.typeLabel}',
                       subtitle: '${CoopService.formatRupiah(tx.amount)} • ${tx.description}',
                     ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.image_search_rounded, size: 13, color: AppTheme.primaryBlue),
-                        SizedBox(width: 4),
-                        Text(
-                          'Lihat Foto Bukti Transfer',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryBlue,
-                            decoration: TextDecoration.underline,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryBlueLight,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.3)),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.image_search_rounded, size: 13, color: AppTheme.primaryBlue),
+                          SizedBox(width: 4),
+                          Flexible(
+                            child: Text(
+                              'Lihat Foto Bukti Transfer',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primaryBlue,
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -833,6 +885,113 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
     );
   }
 
+  Future<void> _savePdfFileToDevice(BuildContext context, MemberModel member) async {
+    final transactions = widget.coopService.currentMemberTransactions;
+    final cleanName = member.name.replaceAll(RegExp(r'[^a-zA-Z0-9]'), '_');
+    final fileName = 'E-Statement_KOPKAR_${cleanName}_${member.nik}.pdf';
+
+    final pdfBytes = PdfGenerator.generateMemberStatementPdf(
+      member: member,
+      transactions: transactions,
+      coopBankName: widget.coopService.coopBankName,
+      coopBankAccountNumber: widget.coopService.coopBankAccountNumber,
+    );
+
+    final savedPath = await PlatformStorageHelper.savePdfToDownloads(
+      fileName: fileName,
+      pdfBytes: pdfBytes,
+    );
+
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context)
+      ..clearSnackBars()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            savedPath != null
+                ? '✅ File PDF berhasil diunduh ke HP: $savedPath'
+                : '⚠️ Gagal menyimpan file PDF ke perangkat.',
+          ),
+          backgroundColor: savedPath != null ? AppTheme.successGreen : AppTheme.dangerRed,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+
+    if (savedPath != null) {
+      showDialog(
+        context: context,
+        builder: (dCtx) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+          title: const Row(
+            children: [
+              Icon(Icons.check_circle_rounded, color: AppTheme.successGreen, size: 24),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'E-Statement PDF Berhasil Diunduh',
+                  style: TextStyle(fontSize: 15.5, fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Dokumen resmi Laporan Simpanan & Pinjaman Anda telah disimpan ke memori perangkat:',
+                style: TextStyle(fontSize: 12, color: AppTheme.textMuted, height: 1.4),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.pastelGreenBg,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppTheme.successGreen.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.picture_as_pdf_rounded, color: AppTheme.dangerRed, size: 22),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            fileName,
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.textDark),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            'Lokasi: $savedPath',
+                            style: const TextStyle(fontSize: 11, color: AppTheme.successGreen, fontWeight: FontWeight.w700),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.pop(dCtx),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Selesai', style: TextStyle(fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
   void _downloadStatementPDF(BuildContext context, MemberModel member) {
     final transactions = widget.coopService.currentMemberTransactions;
     final now = DateTime.now();
@@ -862,15 +1021,28 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.picture_as_pdf_rounded, color: AppTheme.dangerRed, size: 22),
-                        SizedBox(width: 8),
-                        Text(
-                          'E-Statement_KOPKAR_BBM.pdf',
-                          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: AppTheme.textDark),
-                        ),
-                      ],
+                    const Expanded(
+                      child: Row(
+                        children: [
+                          Icon(Icons.picture_as_pdf_rounded, color: AppTheme.dangerRed, size: 22),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'E-Statement_KOPKAR_BBM.pdf',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: AppTheme.textDark),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    TextButton.icon(
+                      onPressed: () => _savePdfFileToDevice(context, member),
+                      icon: const Icon(Icons.download_rounded, size: 16),
+                      label: const Text('Unduh PDF', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppTheme.primaryBlue,
+                      ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close_rounded),
@@ -899,23 +1071,26 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'KOPERASI KARYAWAN (KOPKAR)',
-                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: AppTheme.primaryBlue),
-                                ),
-                                Text(
-                                  'PT BUDI BERLIAN MOTOR',
-                                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: AppTheme.textDark),
-                                ),
-                                Text(
-                                  'Laporan Resmi Saldo Simpanan, Pinjaman & Bagi Hasil 1%',
-                                  style: TextStyle(fontSize: 10, color: AppTheme.textMuted),
-                                ),
-                              ],
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'KOPERASI KARYAWAN (KOPKAR)',
+                                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: AppTheme.primaryBlue),
+                                  ),
+                                  Text(
+                                    'PT BUDI BERLIAN MOTOR',
+                                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: AppTheme.textDark),
+                                  ),
+                                  Text(
+                                    'Laporan Resmi Saldo Simpanan, Pinjaman & Bagi Hasil 1%',
+                                    style: TextStyle(fontSize: 10, color: AppTheme.textMuted),
+                                  ),
+                                ],
+                              ),
                             ),
+                            const SizedBox(width: 8),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                               decoration: BoxDecoration(
@@ -954,7 +1129,10 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Text('TOTAL SALDO SIMPANAN', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AppTheme.primaryBlue)),
+                                  const Expanded(
+                                    child: Text('TOTAL SALDO SIMPANAN', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AppTheme.primaryBlue)),
+                                  ),
+                                  const SizedBox(width: 8),
                                   Text(CoopService.formatRupiah(member.totalSavings), style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: AppTheme.primaryBlue)),
                                 ],
                               ),
@@ -965,7 +1143,10 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    const Text('ESTIMASI HAK BERSIH (NET REFUND)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AppTheme.successGreen)),
+                                    const Expanded(
+                                      child: Text('ESTIMASI HAK BERSIH (NET REFUND)', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: AppTheme.successGreen)),
+                                    ),
+                                    const SizedBox(width: 8),
                                     Text(
                                       CoopService.formatRupiah((member.totalSavings - member.activeLoanBalance).clamp(0.0, double.infinity)),
                                       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w900, color: AppTheme.successGreen),
@@ -1024,6 +1205,33 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
                   ),
                 ),
               ),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 20),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  border: Border(top: BorderSide(color: Color(0xFFE2E8F0))),
+                ),
+                child: SizedBox(
+                  height: 48,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.pop(ctx);
+                      _savePdfFileToDevice(context, member);
+                    },
+                    icon: const Icon(Icons.download_for_offline_rounded, size: 20),
+                    label: const Text(
+                      'Unduh / Simpan File PDF ke HP',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13.5),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlue,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    ),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -1037,8 +1245,17 @@ class _SavingsDetailScreenState extends State<SavingsDetailScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
-          Text(val, style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textDark)),
+          Expanded(
+            child: Text(label, style: const TextStyle(fontSize: 11, color: AppTheme.textMuted)),
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              val,
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppTheme.textDark),
+            ),
+          ),
         ],
       ),
     );

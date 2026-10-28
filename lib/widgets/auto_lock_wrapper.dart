@@ -24,21 +24,31 @@ class AutoLockWrapper extends StatefulWidget {
   State<AutoLockWrapper> createState() => _AutoLockWrapperState();
 }
 
-class _AutoLockWrapperState extends State<AutoLockWrapper> {
+class _AutoLockWrapperState extends State<AutoLockWrapper>
+    with WidgetsBindingObserver {
   Timer? _inactivityTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _startTimer();
     widget.coopService.addListener(_onCoopChanged);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _inactivityTimer?.cancel();
     widget.coopService.removeListener(_onCoopChanged);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      widget.coopService.pullRemoteUpdatesNow();
+    }
   }
 
   void _onCoopChanged() {
@@ -151,16 +161,8 @@ class _AutoLockOverlayState extends State<_AutoLockOverlay> {
     }
   }
 
-  void _onBiometric() {
-    widget.coopService.unlockWithBiometric();
-    widget.onUnlocked();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final member = widget.coopService.currentMember;
-    final isBiometricActive = member?.isBiometricEnabled ?? true;
-
     return Material(
       color: Colors.transparent,
       child: Container(
@@ -303,18 +305,11 @@ class _AutoLockOverlayState extends State<_AutoLockOverlay> {
                   const SizedBox(height: 14),
                 ],
 
-                // Bottom row: Biometric / 0 / Backspace
+                // Bottom row: (kosong) / 0 / Backspace
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    if (isBiometricActive)
-                      _buildIconButton(
-                        icon: Icons.fingerprint_rounded,
-                        color: AppTheme.primaryBlueLight,
-                        onTap: _onBiometric,
-                      )
-                    else
-                      const SizedBox(width: 68, height: 68),
+                    const SizedBox(width: 68, height: 68),
                     const SizedBox(width: 24),
                     _buildKey('0'),
                     const SizedBox(width: 24),

@@ -44,4 +44,11 @@ class PlatformStorageHelper {
   static Future<bool> isFlagSecureActive() async {
     return true;
   }
+
+  static Future<String?> savePdfToDownloads({
+    required String fileName,
+    required List<int> pdfBytes,
+  }) async {
+    return 'Download/$fileName';
+  }
 }

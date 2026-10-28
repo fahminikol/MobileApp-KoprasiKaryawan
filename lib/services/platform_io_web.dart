@@ -151,4 +151,22 @@ class PlatformStorageHelper {
   static Future<bool> isFlagSecureActive() async {
     return true;
   }
+
+  static Future<String?> savePdfToDownloads({
+    required String fileName,
+    required List<int> pdfBytes,
+  }) async {
+    try {
+      final blob = html.Blob([pdfBytes], 'application/pdf');
+      final url = html.Url.createObjectUrlFromBlob(blob);
+      final anchor = html.AnchorElement(href: url)
+        ..setAttribute('download', fileName)
+        ..click();
+      anchor.remove();
+      html.Url.revokeObjectUrl(url);
+      return 'Download/$fileName';
+    } catch (_) {
+      return null;
+    }
+  }
 }

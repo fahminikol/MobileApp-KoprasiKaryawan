@@ -103,32 +103,8 @@ class _SecurityPinDialogState extends State<SecurityPinDialog> {
     }
   }
 
-  void _handleBiometric() {
-    final member = widget.coopService.currentMember;
-    if (member == null || !member.isBiometricEnabled) {
-      setState(() {
-        _errorMessage = 'Fitur Biometrik sedang dinonaktifkan di pengaturan akun Anda.';
-      });
-      return;
-    }
-    if (widget.coopService.isPinLockedOut) {
-      setState(() {
-        _errorMessage =
-            '🛡️ PIN sedang terkunci! Biometrik ditangguhkan selama ${widget.coopService.remainingPinLockoutSeconds} detik.';
-      });
-      return;
-    }
-
-    widget.coopService.addSecurityLog('Otorisasi Biometrik Transaksi (${member.name})');
-    Navigator.pop(context);
-    widget.onVerified();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final isBiometricAllowed =
-        widget.coopService.currentMember?.isBiometricEnabled ?? false;
-
     return Container(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 30),
       decoration: const BoxDecoration(
@@ -205,13 +181,13 @@ class _SecurityPinDialogState extends State<SecurityPinDialog> {
           ],
           const SizedBox(height: 20),
 
-          _buildKeypad(isBiometricAllowed),
+          _buildKeypad(),
         ],
       ),
     );
   }
 
-  Widget _buildKeypad(bool isBiometricAllowed) {
+  Widget _buildKeypad() {
     return Column(
       children: [
         Row(
@@ -232,14 +208,7 @@ class _SecurityPinDialogState extends State<SecurityPinDialog> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
-            if (isBiometricAllowed)
-              IconButton(
-                tooltip: 'Otorisasi Biometrik',
-                icon: const Icon(Icons.fingerprint_rounded, size: 28, color: AppTheme.primaryBlue),
-                onPressed: _handleBiometric,
-              )
-            else
-              const SizedBox(width: 48, height: 48),
+            const SizedBox(width: 48, height: 48),
             _buildKeyButton('0'),
             IconButton(
               icon: const Icon(Icons.backspace_outlined, size: 22, color: AppTheme.textDark),
