@@ -193,16 +193,16 @@ def create_document():
     table_data = [
         # (Row, Label, Value, is_bold, is_italic)
         (1, "1. Judul (Bahasa Indonesia)", 
-         ": Rancang Bangun Prototipe Sistem Informasi Koperasi Karyawan Berbasis Mobile Menggunakan Flutter dengan Otomatisasi Pemotongan Payroll dan Distribusi Sisa Hasil Usaha (Studi Kasus: PT Budi Berlian Motor)", 
+         ": Aplikasi Mobile Koperasi Karyawan Berbasis Flutter dengan Otomatisasi Pemotongan Payroll dan Distribusi Sisa Hasil Usaha (Studi Kasus: PT Budi Berlian Motor)", 
          True, False),
         (2, "   Judul (Bahasa Inggris)", 
-         ": Prototype Design and Development of Mobile-Based Employee Cooperative Information System Using Flutter with Automated Payroll Deduction and Business Surplus Distribution (Case Study: PT Budi Berlian Motor)", 
+         ": Flutter-Based Employee Cooperative Mobile Application with Automated Payroll Deduction and Business Surplus Distribution (Case Study: PT Budi Berlian Motor)", 
          False, True),
         (3, "2. Judul (Bahasa Indonesia)", 
-         ": Perancangan dan Pembangunan Prototipe Aplikasi Simpan Pinjam Koperasi Karyawan Berbasis Flutter dengan Standar Keamanan Bank-Grade dan Dual-Token Authentication (Studi Kasus: PT Budi Berlian Motor)", 
+         ": Aplikasi Mobile Layanan Simpan Pinjam Koperasi Karyawan Berbasis Flutter dengan Penerapan Keamanan Bank-Grade dan Dual-Token Authentication (Studi Kasus: PT Budi Berlian Motor)", 
          True, False),
         (4, "   Judul (Bahasa Inggris)", 
-         ": Design and Construction of Flutter-Based Employee Cooperative Savings and Loan Prototype Application with Bank-Grade Security Standards and Dual-Token Authentication (Case Study: PT Budi Berlian Motor)", 
+         ": Flutter-Based Employee Cooperative Savings and Loan Mobile Application with Bank-Grade Security Implementation and Dual-Token Authentication (Case Study: PT Budi Berlian Motor)", 
          False, True),
         (5, "Tempat Penelitian", 
          ": PT Budi Berlian Motor (Authorized Dealer Mitsubishi Motors Lampung)", 
@@ -366,7 +366,7 @@ def create_document():
     p_j1_title.paragraph_format.space_after = Pt(2)
 
     p_j1_name = doc.add_paragraph()
-    r_j1_n = p_j1_name.add_run("Rancang Bangun Prototipe Sistem Informasi Koperasi Karyawan Berbasis Mobile Menggunakan Flutter dengan Otomatisasi Pemotongan Payroll dan Distribusi Sisa Hasil Usaha (Studi Kasus: PT Budi Berlian Motor)")
+    r_j1_n = p_j1_name.add_run("Aplikasi Mobile Koperasi Karyawan Berbasis Flutter dengan Otomatisasi Pemotongan Payroll dan Distribusi Sisa Hasil Usaha (Studi Kasus: PT Budi Berlian Motor)")
     r_j1_n.bold = True
     r_j1_n.italic = True
     r_j1_n.font.size = Pt(11)
@@ -397,7 +397,7 @@ def create_document():
     p_j2_title.paragraph_format.space_after = Pt(2)
 
     p_j2_name = doc.add_paragraph()
-    r_j2_n = p_j2_name.add_run("Perancangan dan Pembangunan Prototipe Aplikasi Simpan Pinjam Koperasi Karyawan Berbasis Flutter dengan Standar Keamanan Bank-Grade dan Dual-Token Authentication (Studi Kasus: PT Budi Berlian Motor)")
+    r_j2_n = p_j2_name.add_run("Aplikasi Mobile Layanan Simpan Pinjam Koperasi Karyawan Berbasis Flutter dengan Penerapan Keamanan Bank-Grade dan Dual-Token Authentication (Studi Kasus: PT Budi Berlian Motor)")
     r_j2_n.bold = True
     r_j2_n.italic = True
     r_j2_n.font.size = Pt(11)
