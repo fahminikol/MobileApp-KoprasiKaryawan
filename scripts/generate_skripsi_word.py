@@ -199,10 +199,10 @@ def create_document():
          ": Prototype Design and Development of Mobile-Based Employee Cooperative Information System Using Flutter with Automated Payroll Deduction and Business Surplus Distribution (Case Study: PT Budi Berlian Motor)", 
          False, True),
         (3, "2. Judul (Bahasa Indonesia)", 
-         ": Pengembangan Aplikasi Mobile Layanan Simpan Pinjam Koperasi Karyawan Berbasis Flutter dengan Penerapan Keamanan Bank-Grade dan Dual-Token Authentication (Studi Kasus: PT Budi Berlian Motor)", 
+         ": Perancangan dan Pembangunan Prototipe Aplikasi Simpan Pinjam Koperasi Karyawan Berbasis Flutter dengan Standar Keamanan Bank-Grade dan Dual-Token Authentication (Studi Kasus: PT Budi Berlian Motor)", 
          True, False),
         (4, "   Judul (Bahasa Inggris)", 
-         ": Development of Flutter-Based Employee Cooperative Savings and Loan Mobile Application with Bank-Grade Security Implementation and Dual-Token Authentication (Case Study: PT Budi Berlian Motor)", 
+         ": Design and Construction of Flutter-Based Employee Cooperative Savings and Loan Prototype Application with Bank-Grade Security Standards and Dual-Token Authentication (Case Study: PT Budi Berlian Motor)", 
          False, True),
         (5, "Tempat Penelitian", 
          ": PT Budi Berlian Motor (Authorized Dealer Mitsubishi Motors Lampung)", 
@@ -378,7 +378,7 @@ def create_document():
     p_j1_body.paragraph_format.space_after = Pt(10)
     p_j1_body.add_run(
         "Koperasi Karyawan (KOPKAR) PT Budi Berlian Motor merupakan entitas penting dalam memfasilitasi kebutuhan finansial, kesejahteraan, serta simpan pinjam bagi seluruh karyawan perusahaan. Namun, saat ini proses operasional koperasi masih menghadapi kendala utama berupa rekapitulasi data simpanan dan pinjaman yang semi-manual, potensi selisih hitung potongan payroll slip gaji bulanan, minimnya transparansi pembagian bunga pinjaman sebagai Sisa Hasil Usaha (SHU), serta proses klaim pengembalian dana simpanan yang memakan waktu lama ketika karyawan mengundurkan diri (resign).\n\n"
-        "Pengembangan prototipe ini bertujuan untuk merancang dan membangun platform aplikasi mobile terintegrasi (Android & iOS) menggunakan framework Flutter. Prototipe ini secara komprehensif mengotomatiskan dan mendigitalkan seluruh siklus bisnis koperasi karyawan end-to-end dengan keunggulan fungsional utama:\n"
+        "Rancang bangun prototipe yang dibangun murni dari awal (from scratch) ini bertujuan untuk mendesain dan mengimplementasikan platform aplikasi mobile terintegrasi (Android & iOS) menggunakan framework Flutter. Prototipe ini secara komprehensif mengotomatiskan dan mendigitalkan seluruh siklus bisnis koperasi karyawan end-to-end dengan keunggulan fungsional utama:\n"
         "1. Otomatisasi Pemotongan Payroll Bulanan (Automated Payroll Deduction): Sistem secara otomatis membedakan iuran perdana anggota baru (terpotong Rp 125.000, terdiri atas Simpanan Pokok Rp 100.000 yang hanya dibayar 1x seumur hidup dan Simpanan Wajib Rp 25.000) dengan iuran rutin bulanan karyawan tetap (terpotong Rp 25.000/bulan).\n"
         "2. Pengelolaan Pinjaman Anggota & Distribusi Bunga 1% (SHU): Peminjaman dana menerapkan bunga flat 1% per bulan (tenor 1-12 bulan). Seluruh akumulasi bunga 1% yang dibayarkan oleh para peminjam aktif secara otomatis dikumpulkan dan didistribusikan secara transparan dan proporsional kepada seluruh anggota aktif koperasi setiap bulan sebagai saldo bagi hasil (SHU).\n"
         "3. Tabungan Sukarela & Pencetakan E-Statement PDF: Memfasilitasi fleksibilitas setor dan tarik saldo simpanan sukarela dengan verifikasi bukti transfer fisik/digital, serta penyediaan fitur unduh buku tabungan digital (E-Statement PDF) secara instan.\n"
@@ -397,7 +397,7 @@ def create_document():
     p_j2_title.paragraph_format.space_after = Pt(2)
 
     p_j2_name = doc.add_paragraph()
-    r_j2_n = p_j2_name.add_run("Pengembangan Aplikasi Mobile Layanan Simpan Pinjam Koperasi Karyawan Berbasis Flutter dengan Penerapan Keamanan Bank-Grade dan Dual-Token Authentication (Studi Kasus: PT Budi Berlian Motor)")
+    r_j2_n = p_j2_name.add_run("Perancangan dan Pembangunan Prototipe Aplikasi Simpan Pinjam Koperasi Karyawan Berbasis Flutter dengan Standar Keamanan Bank-Grade dan Dual-Token Authentication (Studi Kasus: PT Budi Berlian Motor)")
     r_j2_n.bold = True
     r_j2_n.italic = True
     r_j2_n.font.size = Pt(11)
@@ -409,7 +409,7 @@ def create_document():
     p_j2_body.paragraph_format.space_after = Pt(14)
     p_j2_body.add_run(
         "Layanan finansial simpan pinjam berbasis mobile di lingkungan korporasi menuntut tingkat integritas data dan keamanan yang sangat tinggi, mengingat transaksi melibatkan saldo dana riil karyawan dan kredensial perbankan perusahaan. Kerentanan seperti pencurian sesi (session hijacking), kebocoran token otentikasi, serangan pengulangan transaksi (replay attack), hingga pengambilan tangkapan layar liar (unauthorized screenshot) dapat membahayakan privasi dan dana anggota koperasi.\n\n"
-        "Prototipe ini menitikberatkan pada pengembangan arsitektur keamanan tingkat perbankan (Bank-Grade Security Architecture) pada aplikasi mobile koperasi karyawan PT Budi Berlian Motor yang dibangun dengan Flutter. Fitur keamanan utama yang diimplementasikan meliputi:\n"
+        "Pembangunan prototipe yang dirancang dan dibangun murni dari awal (from scratch) ini menitikberatkan pada implementasi arsitektur keamanan tingkat perbankan (Bank-Grade Security Architecture) pada aplikasi mobile koperasi karyawan PT Budi Berlian Motor menggunakan Flutter. Fitur keamanan utama yang diimplementasikan meliputi:\n"
         "1. Dual-Token Authentication dengan Refresh Token Rotation (RTR): Menggabungkan Access Token berumur pendek (15 menit) dan Refresh Token (30 hari) yang secara otomatis diperbarui (rotated) setiap kali sesi digunakan kembali, sehingga meminimalkan jendela waktu eksploitasi jika token dicegat.\n"
         "2. Anti-Theft Replay Attack Detection: Mekanisme pendeteksi token yang telah usang atau digunakan kembali secara ilegal. Jika terjadi indikasi pencurian token, sistem secara otomatis mengunci (lockout) seluruh sesi anggota untuk melindungi saldo.\n"
         "3. Hardware MAC Address Binding & Enkripsi AES-256 GCM: Token otentikasi dienkripsi menggunakan kunci perangkat keras (Android Keystore / Hardware-backed AES-256) dan terikat dengan alamat MAC fisik perangkat pengguna.\n"
